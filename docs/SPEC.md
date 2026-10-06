@@ -76,6 +76,7 @@ D23–D26 were accepted after Phase 1 on 2026-10-06 (evidence in `reports/phase1
 | D35 | Language | A language button in the Menü, showing the current language as de or en, switches the whole UI between German and English, and the card's meaning with it: English glosses and sentence translations, or German definitions. UI text that changes shuffles into the other language; the German word, forms and sentences stay German. Replaces the EN/DE toggle on the answer view and the UI language setting in Optionen; amends D8 and D20. |
 | D36 | Answered word | The word keeps its size on the answer view; the meaning, forms and sentence follow below it. |
 | D37 | Thema animation | The Thema button takes the new theme first; then a Latte circle grows from it, or the Latte view shrinks into it and goes out. Without view transitions, or with reduced motion, the switch is instant. |
+| D38 | Card flip | Answering and Weiter turn the card over. A scan line carries the Karte title along the border to the right edge, the title shuffling into its mirror image (etraK); the line stays under the K, from the first letter at the start to the last at the end, and the back comes in behind the line: the author's name in ASCII art, a Catppuccin rainbow from top left to bottom right. Each character scrambles as the line passes. After about 0.4 s the line carries the title back to the left and the new front comes in behind it. The hint buttons stay put. With reduced motion the face changes at once. |
 
 ## Implementation defaults
 

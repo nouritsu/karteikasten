@@ -36,10 +36,18 @@ with sync_playwright() as p:
     page.screenshot(path=OUT / "4-satz-tippt.png")  # typing; the button flashes -20
     time.sleep(1.2)
     page.screenshot(path=OUT / "4-satz.png")  # typed; the word has not moved
+    # The card flip (D38): a scan line brings in the back (the name), which holds
+    # while the title rests at the right as etraK; a second sweep brings the new front.
     page.click("button:has-text('Weiß ich'):not(:has-text('nicht'))")
+    time.sleep(0.2)
+    page.screenshot(path=OUT / "5a-flip-scan.png")
     time.sleep(0.4)
+    page.screenshot(path=OUT / "5b-flip-back.png")
+    time.sleep(0.8)
     page.screenshot(path=OUT / "5-beantwortet.png")
     page.click("button:has-text('Weiter')")
+    time.sleep(1.0)
+    page.screenshot(path=OUT / "5c-flip-bereit.png")  # the second sweep uncovering Bereit
     page.click("text=Bereit!")  # fahren
     time.sleep(1.3)
     page.click("button:has-text('Formen')")
@@ -47,7 +55,7 @@ with sync_playwright() as p:
     page.screenshot(path=OUT / "6-formen.png")
     page.click("button:has-text('Schließen')")
     page.click("button:has-text('Weiß ich nicht')")
-    time.sleep(1.0)
+    time.sleep(1.4)
     page.screenshot(path=OUT / "7-nicht.png")
     page.click("button:has-text('Weiter')")
     page.click("text=Bereit!")  # Hand
@@ -58,6 +66,7 @@ with sync_playwright() as p:
     page.screenshot(path=OUT / "9-bild.png")
     page.click("button:has-text('Schließen')")
     page.click("button:has-text('Weiß ich'):not(:has-text('nicht'))")
+    time.sleep(1.3)
     page.click("button[aria-label='English']")
     time.sleep(0.6)
     page.screenshot(path=OUT / "10-english.png")

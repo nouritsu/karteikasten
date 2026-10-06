@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { ActiveClock } from './clock'
 import { band, DEFAULT_SCORE, grade, Rating, score } from './score'
-import { frame, plan } from './shuffle'
+import { frame, plan, sweepPool } from './shuffle'
 import { typingDelay, typingPieces } from './typing'
 
 describe('score', () => {
@@ -101,6 +101,24 @@ describe('letter shuffle', () => {
     expect(frame('100', p, 0, () => 0.99)).toBe('999')
     expect(frame('100', p, 130, () => 0)).toBe('100')
     expect(frame('100', p, 250, () => 0.5)).toBe('105')
+  })
+})
+
+describe('flip sweep scramble', () => {
+  it('scrambles letters, digits and ASCII-art marks, but not spaces', () => {
+    expect(sweepPool('a')).toContain('z')
+    expect(sweepPool('7')).toBe('0123456789')
+    expect(sweepPool('_')).toContain('|')
+    expect(sweepPool(' ')).toBeNull()
+  })
+
+  it('keeps art marks among themselves until each settles', () => {
+    const art = String.raw`|_\/`
+    const shuffle = { lockAt: [0, 100, 100, 100], duration: 100 }
+    const shown = frame(art, shuffle, 50, () => 0, sweepPool)
+    expect(shown[0]).toBe('|')
+    expect([...shown.slice(1)].every((ch) => sweepPool('_')!.includes(ch))).toBe(true)
+    expect(frame(art, shuffle, 100, Math.random, sweepPool)).toBe(art)
   })
 })
 
