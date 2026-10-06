@@ -1,0 +1,9 @@
+# Word-level curation, re-applied on every build. An entry that no longer
+# matches anything fails the build; manual data carries provenance `manual`.
+#
+# Holds: include/exclude, fillers dropped from the frequency list, pinned ids,
+# merges and splits, hidden or reordered senses, manual gloss fixes.
+
+# Lemma ids dropped from the ranking, with the reason.
+[exclude]
+"äh#intj#1" = "filler (hesitation sound), per the spec's tricky-word list"
