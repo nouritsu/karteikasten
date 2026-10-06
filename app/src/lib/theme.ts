@@ -50,6 +50,7 @@ export async function revealTheme(theme: Theme, origin: HTMLElement): Promise<vo
   const circles = [`circle(0px at ${x}px ${y}px)`, `circle(${r}px at ${x}px ${y}px)`]
 
   root.dataset.reveal = grow ? 'grow' : 'shrink'
+  let circle: Animation | undefined
   try {
     // The old snapshot is taken now, with the button already in the new theme.
     const transition = document.startViewTransition(() => {
@@ -60,9 +61,10 @@ export async function revealTheme(theme: Theme, origin: HTMLElement): Promise<vo
     // The top of the screen uncovers first when shrinking, last when growing.
     if (!grow) paintStatusBar()
     // fill holds the end circle until the transition is torn down; without it
-    // the last frame shows the whole old Latte view again.
+    // the last frame shows the whole old Latte view again. It is cancelled
+    // afterwards, or it would clip the next switch's snapshots too.
     const timing = { fill: 'forwards' } as const
-    root.animate(
+    circle = root.animate(
       { clipPath: grow ? circles : circles.reverse() },
       grow
         ? { ...timing, duration: GROW_MS, easing: 'cubic-bezier(0.4, 0, 0.2, 1)', pseudoElement: '::view-transition-new(root)' }
@@ -70,6 +72,7 @@ export async function revealTheme(theme: Theme, origin: HTMLElement): Promise<vo
     )
     await transition.finished
   } finally {
+    circle?.cancel()
     applyTheme(theme)
     delete origin.dataset.theme
     paintStatusBar()
