@@ -59,11 +59,14 @@ export async function revealTheme(theme: Theme, origin: HTMLElement): Promise<vo
     await transition.ready
     // The top of the screen uncovers first when shrinking, last when growing.
     if (!grow) paintStatusBar()
+    // fill holds the end circle until the transition is torn down; without it
+    // the last frame shows the whole old Latte view again.
+    const timing = { fill: 'forwards' } as const
     root.animate(
       { clipPath: grow ? circles : circles.reverse() },
       grow
-        ? { duration: GROW_MS, easing: 'cubic-bezier(0.4, 0, 0.2, 1)', pseudoElement: '::view-transition-new(root)' }
-        : { duration: SHRINK_MS, easing: 'cubic-bezier(0.4, 0, 1, 1)', pseudoElement: '::view-transition-old(root)' },
+        ? { ...timing, duration: GROW_MS, easing: 'cubic-bezier(0.4, 0, 0.2, 1)', pseudoElement: '::view-transition-new(root)' }
+        : { ...timing, duration: SHRINK_MS, easing: 'cubic-bezier(0.4, 0, 1, 1)', pseudoElement: '::view-transition-old(root)' },
     )
     await transition.finished
   } finally {
