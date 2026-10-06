@@ -1,0 +1,172 @@
+/* Iosevka subset with the icon symbols, built by Nix (nix build .#app-assets -o app/public/generated). */
+@font-face {
+  font-family: 'Iosevka';
+  src: url('/generated/fonts/iosevka-regular.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Iosevka';
+  src: url('/generated/fonts/iosevka-bold.woff2') format('woff2');
+  font-weight: 700;
+  font-display: swap;
+}
+
+/* The ⏾ ☼ 🕮 icons, from Noto Sans Symbols 2. */
+@font-face {
+  font-family: 'Noto Symbols';
+  src: url('/generated/fonts/symbols.woff2') format('woff2');
+  unicode-range: U+23FE, U+263C, U+1F56E;
+  font-display: swap;
+}
+
+/* Catppuccin (catppuccin.com/palette): Latte (light) and Mocha (dark). Thema
+   switches between them; index.html sets the first one before the page paints. */
+:root[data-theme='latte'] {
+  color-scheme: light;
+  --ctp-rosewater: #dc8a78;
+  --ctp-flamingo: #dd7878;
+  --ctp-pink: #ea76cb;
+  --ctp-mauve: #8839ef;
+  --ctp-red: #d20f39;
+  --ctp-maroon: #e64553;
+  --ctp-peach: #fe640b;
+  --ctp-yellow: #df8e1d;
+  --ctp-green: #40a02b;
+  --ctp-teal: #179299;
+  --ctp-sky: #04a5e5;
+  --ctp-sapphire: #209fb5;
+  --ctp-blue: #1e66f5;
+  --ctp-lavender: #7287fd;
+  --ctp-text: #4c4f69;
+  --ctp-subtext1: #5c5f77;
+  --ctp-subtext0: #6c6f85;
+  --ctp-overlay2: #7c7f93;
+  --ctp-overlay1: #8c8fa1;
+  --ctp-overlay0: #9ca0b0;
+  --ctp-surface2: #acb0be;
+  --ctp-surface1: #bcc0cc;
+  --ctp-surface0: #ccd0da;
+  --ctp-base: #eff1f5;
+  --ctp-mantle: #e6e9ef;
+  --ctp-crust: #dce0e8;
+}
+
+:root,
+:root[data-theme='mocha'] {
+  color-scheme: dark;
+  --ctp-rosewater: #f5e0dc;
+  --ctp-flamingo: #f2cdcd;
+  --ctp-pink: #f5c2e7;
+  --ctp-mauve: #cba6f7;
+  --ctp-red: #f38ba8;
+  --ctp-maroon: #eba0ac;
+  --ctp-peach: #fab387;
+  --ctp-yellow: #f9e2af;
+  --ctp-green: #a6e3a1;
+  --ctp-teal: #94e2d5;
+  --ctp-sky: #89dceb;
+  --ctp-sapphire: #74c7ec;
+  --ctp-blue: #89b4fa;
+  --ctp-lavender: #b4befe;
+  --ctp-text: #cdd6f4;
+  --ctp-subtext1: #bac2de;
+  --ctp-subtext0: #a6adc8;
+  --ctp-overlay2: #9399b2;
+  --ctp-overlay1: #7f849c;
+  --ctp-overlay0: #6c7086;
+  --ctp-surface2: #585b70;
+  --ctp-surface1: #45475a;
+  --ctp-surface0: #313244;
+  --ctp-base: #1e1e2e;
+  --ctp-mantle: #181825;
+  --ctp-crust: #11111b;
+}
+
+/* What the app draws with. Mauve is the accent. Gender colours: der blue, die
+   red, das green, plural-only pink (purple would be the accent). Score bands
+   colour the Punkte block: Easy green, Good yellow, Hard red. */
+:root {
+  --bg: var(--ctp-base);
+  --fg: var(--ctp-text);
+  --muted: var(--ctp-subtext0);
+  --border: var(--ctp-overlay0);
+  --button: var(--ctp-surface0);
+  --button-border: var(--ctp-surface2);
+  --accent: var(--ctp-mauve);
+  --der: var(--ctp-blue);
+  --die: var(--ctp-red);
+  --das: var(--ctp-green);
+  --plural: var(--ctp-pink);
+  --band-easy: var(--ctp-green);
+  --band-good: var(--ctp-yellow);
+  --band-hard: var(--ctp-red);
+  --radius: 0.6em;
+  font-family: 'Iosevka', 'Noto Symbols', ui-monospace, monospace;
+  font-size: 16px;
+  line-height: 1.3;
+  background: var(--bg);
+  color: var(--fg);
+  -webkit-text-size-adjust: 100%;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  overscroll-behavior: none;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: var(--button);
+  border: 1px solid var(--button-border);
+  border-radius: var(--radius);
+  padding: 0.3em 1ch;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+button:disabled {
+  opacity: 0.45;
+}
+
+button.primary {
+  border-color: var(--accent);
+}
+
+/* Icons are Unicode symbols from the app font, in the accent colour. */
+.icon {
+  color: var(--accent);
+  margin-right: 0.6ch;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.g-der {
+  color: var(--der);
+}
+
+.g-die {
+  color: var(--die);
+}
+
+.g-das {
+  color: var(--das);
+}
+
+.g-plural {
+  color: var(--plural);
+}

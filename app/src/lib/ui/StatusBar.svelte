@@ -1,0 +1,62 @@
+<script lang="ts">
+  import { i18n } from '../i18n/index.svelte'
+  import type { Session } from '../session.svelte'
+  import Block from './Block.svelte'
+  import { genderClass } from './format'
+
+  let { session }: { session: Session } = $props()
+  const t = $derived(i18n.t.status)
+  // Bereit: every field shows dashes at its normal width.
+  const dashed = $derived(session.phase === 'ready')
+  const word = $derived(session.word)
+
+  function dash(text: string): string {
+    return text.replace(/[^#[\]%·:]/g, '-')
+  }
+  function show(text: string): string {
+    return dashed ? dash(text) : text
+  }
+
+  const today = $derived(String(session.reviews.length).padStart(2, ' '))
+  const total = $derived(String(session.reviews.length).padStart(3, ' '))
+  const rank = $derived(`#${String(word?.rank ?? 0).padStart(3, ' ')}`)
+  const pos = $derived(word ? (i18n.t.pos[word.pos] ?? word.pos) : '')
+  const article = $derived(word?.pos === 'noun' ? (word.article ?? '') : '')
+  const due = $derived(String(session.words.length - session.index).padStart(2, ' '))
+  const coverage = $derived(Math.round(session.coverage * 100))
+  const bar = $derived('#'.repeat(Math.round(coverage / (100 / 12))).padEnd(12, '.'))
+  const elapsed = $derived(Math.max(0, Math.floor((session.now - session.startedAt) / 1000)))
+  const clock = $derived(`${String(Math.floor(elapsed / 60)).padStart(2, '0')}:${String(elapsed % 60).padStart(2, '0')}`)
+  const average = $derived(session.average === null ? '--' : String(session.average).padStart(2, ' '))
+  // The title's right side: weekday and time of day, never dashed.
+  const weekdays = $derived(new Intl.DateTimeFormat(i18n.lang, { weekday: 'long' }))
+  const now = $derived(new Date(session.now))
+  const daytime = $derived(
+    `${weekdays.format(now)} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`,
+  )
+</script>
+
+<Block title={t.title} titleRight={daytime} class="status">
+  <p>
+    {t.rank} {show(rank)} · {show(pos.padEnd(5, ' '))}
+    {#if article}· <span class={dashed ? '' : `g-${genderClass(word!)}`}>{show(article)}</span>{/if}
+  </p>
+  <p>{t.today} {show(today)} · {t.total} {show(total)}</p>
+  <p>{t.due} {show(due)} · {t.new} {show(' 0')} · {t.streak} {show(' 1')}</p>
+  <p>{t.coverage} [{show(bar)}] {show(String(coverage).padStart(2, ' '))}%</p>
+  <p>{t.session} {show(clock)} · {t.average} {show(average)} {t.points}</p>
+</Block>
+
+<style>
+  :global(.status) {
+    justify-content: space-evenly;
+  }
+
+  p {
+    margin: 0;
+    white-space: pre;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.35;
+  }
+</style>
