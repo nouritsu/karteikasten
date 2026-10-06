@@ -22,8 +22,10 @@
 }
 
 /* Catppuccin (catppuccin.com/palette): Latte (light) and Mocha (dark). Thema
-   switches between them; index.html sets the first one before the page paints. */
-:root[data-theme='latte'] {
+   switches between them; index.html sets the first one before the page paints.
+   Any element can carry its own theme: the Thema button takes the new one a
+   beat before the page does (src/lib/theme.ts). */
+[data-theme='latte'] {
   color-scheme: light;
   --ctp-rosewater: #dc8a78;
   --ctp-flamingo: #dd7878;
@@ -53,8 +55,9 @@
   --ctp-crust: #dce0e8;
 }
 
-:root,
-:root[data-theme='mocha'] {
+/* The default; :where keeps it below [data-theme='latte'] on the root. */
+:where(:root),
+[data-theme='mocha'] {
   color-scheme: dark;
   --ctp-rosewater: #f5e0dc;
   --ctp-flamingo: #f2cdcd;
@@ -86,8 +89,10 @@
 
 /* What the app draws with. Mauve is the accent. Gender colours: der blue, die
    red, das green, plural-only pink (purple would be the accent). Score bands
-   colour the Punkte block: Easy green, Good yellow, Hard red. */
-:root {
+   colour the Punkte block: Easy green, Good yellow, Hard red. Declared with
+   the palette, so an element with its own theme resolves them in it. */
+:root,
+[data-theme] {
   --bg: var(--ctp-base);
   --fg: var(--ctp-text);
   --muted: var(--ctp-subtext0);
@@ -102,13 +107,36 @@
   --band-easy: var(--ctp-green);
   --band-good: var(--ctp-yellow);
   --band-hard: var(--ctp-red);
+  color: var(--fg);
+}
+
+:root {
   --radius: 0.6em;
   font-family: 'Iosevka', 'Noto Symbols', ui-monospace, monospace;
   font-size: 16px;
   line-height: 1.3;
   background: var(--bg);
-  color: var(--fg);
   -webkit-text-size-adjust: 100%;
+}
+
+/* The Thema reveal: a circle of the new theme grows from the button (to Latte),
+   or the old Latte view shrinks into it (to Mocha). theme.ts animates the
+   clip-path; this drops the default cross-fade, puts the shrinking old view on
+   top, and holds colour transitions so nothing fades inside the circle. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+:root[data-reveal='shrink']::view-transition-old(root) {
+  z-index: 1;
+}
+
+:root[data-reveal] *,
+:root[data-reveal] *::before,
+:root[data-reveal] *::after {
+  transition: none !important;
 }
 
 html,

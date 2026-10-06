@@ -75,6 +75,7 @@ D23–D26 were accepted after Phase 1 on 2026-10-06 (evidence in `reports/phase1
 | D34 | Bereit | Bereit! is plain text at twice its former size, without a button border; the whole card face is its button. |
 | D35 | Language | A language button in the Menü, showing the current language as de or en, switches the whole UI between German and English, and the card's meaning with it: English glosses and sentence translations, or German definitions. UI text that changes shuffles into the other language; the German word, forms and sentences stay German. Replaces the EN/DE toggle on the answer view and the UI language setting in Optionen; amends D8 and D20. |
 | D36 | Answered word | The word keeps its size on the answer view; the meaning, forms and sentence follow below it. |
+| D37 | Thema animation | The Thema button takes the new theme first; then a Latte circle grows from it, or the Latte view shrinks into it and goes out. Without view transitions, or with reduced motion, the switch is instant. |
 
 ## Implementation defaults
 
@@ -482,7 +483,7 @@ The status block carries eleven fields, all dashed during Bereit, under a title 
 | Screen | Contents |
 | --- | --- |
 | Optionen | Daily new limit; n (up to the deck's `n_max`); desired retention; all score numbers and grade bands; layout ratios and score/nav order; audio after answer; haptics; reduced motion; font size; export and import |
-| Thema | Switches between Catppuccin Latte and Mocha (D30) |
+| Thema | Switches between Catppuccin Latte and Mocha (D30), in a circle from the button (D37) |
 | Statistik | 12-week heatmap (░▒▓█), 30-day review sparkline, average-score trend, 30-day retention, known words per rank band (1–500, 501–1000, …), coverage %, leeches |
 | Wörter | All n words with rank, lemma, type and status; filters by status, type and gender; a detail view with all data and no scoring; actions Kenne ich schon, Pausieren, Zurücksetzen |
 | Suche | Opens Wörter with search focused; umlaut-tolerant (ae matches ä) |

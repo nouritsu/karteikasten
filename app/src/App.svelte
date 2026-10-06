@@ -4,7 +4,7 @@
   import { i18n } from './lib/i18n/index.svelte'
   import { Session, type Answer } from './lib/session.svelte'
   import { loadDeck } from './lib/store/deck'
-  import { applyTheme, currentTheme, saveTheme, THEMES } from './lib/theme'
+  import { currentTheme, revealTheme, saveTheme, THEMES } from './lib/theme'
   import type { Deck } from './lib/types'
   import Card from './lib/ui/Card.svelte'
   import FormsView from './lib/ui/FormsView.svelte'
@@ -21,12 +21,12 @@
   const session = new Session()
   let deck = $state<Deck | null>(null)
   let failed = $state(false)
-  let theme = $state(currentTheme())
+  let theme = $state(currentTheme()) // what the Thema button shows; the page follows
+  let switching = false
   let sheet = $state<Sheet | null>(null)
   let audio: HTMLAudioElement | null = null
   const t = $derived(i18n.t)
 
-  $effect(() => applyTheme(theme))
   $effect(() => {
     document.documentElement.lang = i18n.lang
   })
@@ -81,12 +81,19 @@
     if (AUTOPLAY) play()
   }
 
-  function onOpen(screen: Screen) {
-    if (screen === 'theme') {
-      theme = THEMES[(THEMES.indexOf(theme) + 1) % THEMES.length]
-      saveTheme(theme)
-    } else if (screen === 'lang') switchLanguage()
+  function onOpen(screen: Screen, button: HTMLElement) {
+    if (screen === 'theme') switchTheme(button)
+    else if (screen === 'lang') switchLanguage()
     else sheet = screen
+  }
+
+  // The button takes the new theme first, then the page follows in a circle from it.
+  function switchTheme(button: HTMLElement) {
+    if (switching) return
+    switching = true
+    theme = THEMES[(THEMES.indexOf(theme) + 1) % THEMES.length]
+    saveTheme(theme)
+    revealTheme(theme, button).finally(() => (switching = false))
   }
 
   // The UI text that changes shuffles into the other language; German content stays.

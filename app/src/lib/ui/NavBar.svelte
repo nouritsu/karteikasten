@@ -7,7 +7,7 @@
   import type { Theme } from '../theme'
   import Block from './Block.svelte'
 
-  let { theme, onOpen }: { theme: Theme; onOpen: (screen: Screen) => void } = $props()
+  let { theme, onOpen }: { theme: Theme; onOpen: (screen: Screen, button: HTMLElement) => void } = $props()
 
   // One row of square icon buttons; their names are for screen readers. The
   // symbols come from the app font (nix/app-assets.nix; ⏾ ☼ 🕮 from Noto
@@ -27,7 +27,8 @@
 <Block title={i18n.t.nav.title} class="nav">
   <div class="row">
     {#each ITEMS as item (item.id)}
-      <button type="button" aria-label={i18n.t.nav[item.id]} title={i18n.t.nav[item.id]} onclick={() => onOpen(item.id)}>
+      <button type="button" aria-label={i18n.t.nav[item.id]} title={i18n.t.nav[item.id]} onclick={(event) => onOpen(item.id, event.currentTarget)}
+      >
         <span class="icon" aria-hidden="true">{item.icon}</span>
       </button>
     {/each}

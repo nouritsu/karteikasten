@@ -62,9 +62,23 @@ with sync_playwright() as p:
     time.sleep(0.6)
     page.screenshot(path=OUT / "10-english.png")
     page.click("button[aria-label='Deutsch']")
+    # Thema (D37): the button turns first, then a Latte circle grows from it;
+    # back to Mocha, the Latte view shrinks into the button.
     page.click("button[aria-label='Thema']")
-    time.sleep(0.3)
+    time.sleep(0.45)
+    page.screenshot(path=OUT / "11a-thema-grow.png")
+    time.sleep(0.8)
     page.screenshot(path=OUT / "11-thema.png")
+    page.click("button[aria-label='Thema']")
+    time.sleep(0.5)
+    page.screenshot(path=OUT / "11b-thema-shrink.png")
+    time.sleep(0.8)
+    page.screenshot(path=OUT / "11c-thema-mocha.png")
+    page.click("button[aria-label='Thema']")
+    page.click("button[aria-label='Thema']")  # ignored while the first runs
+    time.sleep(1.2)
+    assert page.evaluate("document.documentElement.dataset.theme") == "latte"
+    assert page.evaluate("document.documentElement.dataset.reveal") is None
 
     # Offline: once the service worker controls the page, a reload without network must still work.
     page.evaluate("navigator.serviceWorker.ready")
