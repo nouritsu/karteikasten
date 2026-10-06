@@ -1,0 +1,25 @@
+# Pipeline sources, stage outputs and decks: never committed.
+/data/
+
+# DeReWo is a private cross-check only; never commit a copy, wherever it lands.
+*[dD][eE][rR][eE][wW][oO]*.txt
+*[dD][eE][rR][eE][wW][oO]*.zip
+
+# Nix
+result
+result-*
+.direnv/
+
+# App
+node_modules/
+/app/dist/
+# Generated (nix build .#app-assets) and the local deck for development.
+/app/public/generated
+/app/public/deck
+
+# Curation tool
+target/
+
+# Python
+__pycache__/
+.pytest_cache/
