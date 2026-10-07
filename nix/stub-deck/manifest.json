@@ -1,0 +1,8 @@
+{
+  "counts": {"audio": 0, "images": 0, "sentences": 0, "words": 0},
+  "deck_version": "stub",
+  "n_max": 0,
+  "note": "Empty deck for building the APK in nix flake check; nix run .#apk bundles a real one.",
+  "profile": "personal",
+  "schema_version": 1
+}

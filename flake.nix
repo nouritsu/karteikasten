@@ -19,10 +19,29 @@
           own = self.packages.${system};
         });
   in {
-    packages = forAllSystems ({pkgs, ...}: rec {
+    packages = forAllSystems ({
+      system,
+      pkgs,
+      ...
+    }: let
+      # The Android SDK is unfree, and androidenv asks for its licence to be accepted.
+      androidPkgs = import nixpkgs {
+        inherit system;
+        config = {
+          allowUnfree = true;
+          android_sdk.accept_license = true;
+        };
+      };
+    in rec {
       app = pkgs.callPackage ./nix/app.nix {assets = app-assets;};
       # Font subset and icons; in development: nix build .#app-assets -o app/public/generated
       app-assets = pkgs.callPackage ./nix/app-assets.nix {};
+      # Unsigned, with an empty deck unless overridden; `nix run .#apk` bundles the
+      # working tree's deck and signs it.
+      apk = androidPkgs.callPackage ./nix/apk.nix {
+        assets = app-assets;
+        web = app;
+      };
       # `nix run .#curate` from the working tree: it reads data/work and writes overrides/.
       curate = pkgs.callPackage ./nix/curate.nix {};
       pipeline = pkgs.callPackage ./nix/pipeline.nix {};
@@ -47,6 +66,14 @@
       build = pipelineApp "build" "Build the deck bundle from the data/raw snapshot (stages 20-70)";
       report = pipelineApp "report" "Write coverage and diff reports to reports/";
       deploy-deck = pipelineApp "deploy-deck" "Copy a deck bundle to the Pi and update latest.json";
+      apk = {
+        type = "app";
+        program = lib.getExe (pkgs.callPackage ./nix/apk-app.nix {
+          inherit (own) apk;
+          flake = self;
+        });
+        meta.description = "Bundle a deck into the APK, sign it with the debug key, and optionally adb install it";
+      };
     });
 
     devShells = forAllSystems ({
@@ -71,9 +98,15 @@
           pkgs.clippy
           pkgs.rustfmt
           pkgs.rust-analyzer
+          # APK: Gradle and a JDK to build app/android by hand, adb to install
+          pkgs.gradle
+          pkgs.jdk21
+          pkgs.android-tools
           # Nix
           pkgs.alejandra
         ];
+
+        ANDROID_HOME = own.apk.sdk;
 
         RUST_SRC_PATH = "${pkgs.rustPlatform.rustLibSrc}";
       };
@@ -122,6 +155,9 @@
 
       # Building the package runs `cargo test`.
       inherit (own) curate;
+
+      # With the stub deck: Gradle still builds offline from nix/apk-deps.json.
+      inherit (own) apk;
 
       curate-clippy = own.curate.overrideAttrs (old: {
         pname = "${old.pname}-clippy";
