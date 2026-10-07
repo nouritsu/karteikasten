@@ -29,7 +29,6 @@ def test_find_root_outside_a_checkout(tmp_path):
     [
         ["build", "--profile", "public"],
         ["report"],
-        ["deploy-deck", "pi"],
     ],
 )
 def test_stub_commands_report_their_checkout(tmp_path, monkeypatch, capsys, argv):

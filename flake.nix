@@ -1,5 +1,5 @@
 {
-  description = "Karteikasten: flashcards for the most frequent German words, as a phone PWA";
+  description = "Karteikasten: flashcards for the most frequent German words, as an Android app";
 
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
@@ -9,10 +9,10 @@
   }: let
     inherit (nixpkgs) lib;
 
-    # The desktop runs the pipeline and the curation tool; the Pi (aarch64) serves the app.
-    # `own` is this flake's packages for the same system.
+    # The desktop runs the pipeline and the curation tool and builds the APK; androidenv's
+    # SDK tools only run on x86_64. `own` is this flake's packages for the same system.
     forAllSystems = f:
-      lib.genAttrs ["x86_64-linux" "aarch64-linux"] (system:
+      lib.genAttrs ["x86_64-linux"] (system:
         f {
           inherit system;
           pkgs = nixpkgs.legacyPackages.${system};
@@ -65,7 +65,6 @@
       fetch = pipelineApp "fetch" "Snapshot every source into data/raw and update sources.lock.json";
       build = pipelineApp "build" "Build the deck bundle from the data/raw snapshot (stages 20-70)";
       report = pipelineApp "report" "Write coverage and diff reports to reports/";
-      deploy-deck = pipelineApp "deploy-deck" "Copy a deck bundle to the Pi and update latest.json";
       apk = {
         type = "app";
         program = lib.getExe (pkgs.callPackage ./nix/apk-app.nix {
@@ -170,32 +169,6 @@
         doCheck = false;
         installPhase = "touch $out";
       });
-
-      # Evaluates the module in a minimal NixOS system and parses the Caddyfile it yields.
-      server-module = let
-        caddy =
-          (lib.nixosSystem {
-            modules = [
-              self.nixosModules.karteikasten
-              {
-                nixpkgs.hostPlatform = system;
-                system.stateVersion = "26.05";
-                services.karteikasten = {
-                  enable = true;
-                  hostName = "karteikasten.example.ts.net";
-                };
-              }
-            ];
-          }).config.services.caddy;
-      in
-        pkgs.runCommand "karteikasten-server-module" {nativeBuildInputs = [caddy.package];} ''
-          export HOME=$TMPDIR
-          caddy adapt --config ${caddy.configFile} --adapter caddyfile > /dev/null
-          touch $out
-        '';
     });
-
-    # Imported by the Pi's system flake.
-    nixosModules.karteikasten = import ./nix/server.nix self;
   };
 }

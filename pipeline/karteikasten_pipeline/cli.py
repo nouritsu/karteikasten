@@ -12,7 +12,6 @@ from karteikasten_pipeline.paths import NotInWorkingTree, Paths, find_root
 PLANNED = {
     "build": 3,
     "report": 1,
-    "deploy-deck": 7,
 }
 
 
@@ -37,9 +36,6 @@ def parser() -> argparse.ArgumentParser:
     )
 
     commands.add_parser("report", help="write coverage and diff reports to reports/")
-
-    deploy = commands.add_parser("deploy-deck", help="copy a deck bundle to the Pi and update latest.json")
-    deploy.add_argument("host", help="ssh destination of the Pi")
 
     return cli
 
