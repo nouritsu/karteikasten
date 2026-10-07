@@ -229,6 +229,7 @@
     align-items: center;
   }
 
+  /* Centred under the word: meanings, forms, the cognate and the sentence. */
   .below {
     grid-row: 3;
     align-self: start;
@@ -236,6 +237,7 @@
     flex-direction: column;
     gap: 0.15em;
     padding-top: 0.6em;
+    text-align: center;
   }
 
   /* Answered: the word keeps its size and the rest follows it, centred while it fits
@@ -362,7 +364,6 @@
 
   .sentence {
     margin-top: 0.6em;
-    text-align: center;
   }
 
   hr {
