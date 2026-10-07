@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <!-- Catppuccin Mocha. Full-bleed background; the card sits inside the central
-       safe zone so the same image works as a maskable icon. -->
+       safe zone so the same image works as an adaptive icon. -->
   <rect width="512" height="512" fill="#1e1e2e"/>
   <rect x="136" y="150" width="240" height="212" rx="22" fill="none" stroke="#cdd6f4" stroke-width="14"/>
   <rect x="164" y="134" width="96" height="32" fill="#1e1e2e"/>

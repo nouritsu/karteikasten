@@ -2,9 +2,8 @@
 # - Iosevka (SIL OFL 1.1, no Reserved Font Name) subset to the scripts the app shows;
 # - the ⏾ ☼ 🕮 icons from Noto Sans Symbols 2 (SIL OFL 1.1): Iosevka lacks 🕮 and
 #   draws the moon and sun too small;
-# - PWA icons rendered from app/icon.svg;
-# - the Android launcher icons from the same file (D40): 48 dp legacy icons and the
-#   108 dp adaptive foreground, whose card already sits in the central safe zone.
+# - the Android launcher icons rendered from app/icon.svg (D40): 48 dp legacy icons
+#   and the 108 dp adaptive foreground, whose card already sits in the central safe zone.
 # In development: nix build .#app-assets -o app/public/generated
 {
   fetchurl,
@@ -71,15 +70,12 @@ in
       vips
     ];
   } ''
-    mkdir -p $out/fonts $out/icons
+    mkdir -p $out/fonts
     ${subset "Regular"}
     ${subset "Bold"}
     cp ${license} $out/fonts/LICENSE.md
     pyftsubset ${noto-fonts}/share/fonts/noto/NotoSansSymbols2-Regular.otf \
       --unicodes=U+23FE,U+263C,U+1F56E --flavor=woff2 --output-file=$out/fonts/symbols.woff2
     cp ${noto-fonts.src}/fonts/LICENSE $out/fonts/LICENSE-noto.txt
-    for size in 192 512; do
-      vips thumbnail ${../app/icon.svg} "$out/icons/icon-$size.png[strip]" $size
-    done
     ${launcherIcons}
   ''

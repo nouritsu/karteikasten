@@ -13,8 +13,8 @@ buildNpmPackage {
   npmDeps = importNpmLock {npmRoot = ../app;};
   inherit (importNpmLock) npmConfigHook;
 
-  # The deck is deployed separately; only the generated font and icons join the build.
-  # The Android launcher icons go to the APK's res/ instead (nix/apk.nix).
+  # Only the generated fonts join the build: the deck comes in with the APK, and the
+  # Android launcher icons go to its res/ (nix/apk.nix).
   preBuild = ''
     mkdir -p public
     cp -r --no-preserve=mode ${assets} public/generated

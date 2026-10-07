@@ -1,11 +1,10 @@
 #!/usr/bin/env fish
-# Serve the built app to your phone on the home network, with a QR code that opens it.
+# Preview the built app in your phone's browser on the home network, with a QR code
+# that opens it; quicker than an APK for trying UI changes. The app itself installs
+# with `nix run .#apk -- --install` (D40).
 # From the dev shell:  app/phone.fish [--ip ADDRESS] [--port PORT] [--no-build]
 #
-# Listens only on the LAN address, never on Tailscale or other interfaces. Over plain
-# HTTP on a LAN address, browsers run the app but disable its service worker, so
-# installing it and offline use need the origin allowed once in Chrome on Android:
-# chrome://flags/#unsafely-treat-insecure-origin-as-secure
+# Listens only on the LAN address, never on Tailscale or other interfaces.
 
 argparse 'ip=' 'port=' no-build -- $argv; or exit 2
 set -l port 4173
@@ -39,8 +38,6 @@ set -l origin "http://$address:$port"
 echo
 qrencode -t ansiutf8 -m 2 "$origin/"
 echo "Scan it, or open $origin/ on a phone on the same network."
-echo "To install the app and use it offline in Chrome on Android, once: open"
-echo "chrome://flags/#unsafely-treat-insecure-origin-as-secure, enter $origin, set Enabled, Relaunch."
 if systemctl is-active --quiet firewall.service
     set -l device (ip -4 -o addr show | string match -rg '^\d+:\s+(\S+)\s+inet '(string escape --style=regex -- $address)'/')[1]
     echo
