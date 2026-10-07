@@ -22,13 +22,15 @@
   // turn the card over first (D38): the old front stays until the back covers it.
   let face = $state.raw<Face>(current())
   let back = $state(false) // the back of the card lies over the face
-  let scanning = $state(false) // the scan line is crossing
-  let titleEnd = $state(false) // the title sits at the right edge, mirrored
+  let scanning = $state(false) // the scan line shows
+  // The title sits at the right edge, mirrored. The title, the line and the back's
+  // edge all move on this one flag, with the same 0.4 s linear transition, so they
+  // start in the same frame and stay together.
+  let titleEnd = $state(false)
+  let held = $state(false) // the back covers the card edge to edge
   let flipping = false
   let faceEl: HTMLElement | undefined = $state()
   let backEl: HTMLElement | undefined = $state()
-  let scanEl: HTMLElement | undefined = $state()
-  let animations: Animation[] = []
 
   const t = $derived(i18n.t)
   const word = $derived(face.word)
@@ -72,55 +74,38 @@
     flipping = true
     try {
       back = true
-      titleEnd = true
       await tick()
-      await sweep(backEl, 'cover')
+      await sweep(backEl, true)
       // The line stopped under the K; the back now covers the card edge to edge.
-      for (const animation of animations) animation.cancel()
-      scanning = false
-      await new Promise((resolve) => setTimeout(resolve, HOLD_MS))
+      held = true
+      await wait(HOLD_MS)
       face = current()
-      titleEnd = false
+      held = false
       await tick()
-      await sweep(faceEl, 'uncover')
-    } catch {
-      // cancelled: land on the session as it is
-      face = current()
-      titleEnd = false
+      await sweep(faceEl, false)
     } finally {
-      // Filled animations would outlive the flip and stack up (as the Thema reveal's did).
-      for (const animation of animations) animation.cancel()
-      animations = []
       back = false
+      held = false
+      titleEnd = false
       scanning = false
       flipping = false
     }
     sync()
   }
 
-  /** One pass of the scan line, travelling under the title's K: left to right, the
-   *  back comes in behind it ('cover'); right to left, the back peels away and
-   *  shows the new front ('uncover'). The side coming in scrambles into place as
-   *  the line passes. */
-  async function sweep(incoming: HTMLElement | undefined, mode: 'cover' | 'uncover') {
-    if (!incoming || !backEl || !scanEl) return
-    for (const animation of animations) animation.cancel()
+  const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+  /** One pass of the scan line under the title's K: out to the right, the back
+   *  comes in behind it; back to the left, the back peels away and shows the new
+   *  front. The side coming in scrambles into place as the line passes. */
+  async function sweep(incoming: HTMLElement | undefined, out: boolean) {
+    if (!incoming || !backEl) return
+    const reach = REACH_CH * 0.5 * parseFloat(getComputedStyle(backEl).fontSize) // Iosevka's ch is half an em
+    getComputedStyle(backEl).clipPath // settle the back's starting edge, so it transitions from there
+    sweepIn(incoming, SWEEP_MS, SCRAMBLE_MS, !out, reach)
+    titleEnd = out
     scanning = true
-    const cover = mode === 'cover'
-    const reach = REACH_CH * 0.5 * parseFloat(getComputedStyle(backEl).fontSize)
-    sweepIn(incoming, SWEEP_MS, SCRAMBLE_MS, !cover, reach)
-    const timing: KeyframeAnimationOptions = { duration: SWEEP_MS, easing: 'linear', fill: 'forwards' }
-    // The back covers the card from its left edge up to the line.
-    const clip = [
-      { clipPath: `inset(0 calc(100% - ${reach}px) 0 0)` },
-      { clipPath: `inset(0 ${reach}px 0 0)` },
-    ]
-    const line = [{ left: `${reach}px` }, { left: `calc(100% - ${reach}px)` }]
-    animations = [
-      backEl.animate(cover ? clip : clip.reverse(), timing),
-      scanEl.animate(cover ? line : line.reverse(), timing),
-    ]
-    await Promise.all(animations.map((animation) => animation.finished))
+    await wait(SWEEP_MS)
     scanning = false
   }
 </script>
@@ -130,7 +115,7 @@
   <!-- While the card runs, the word holds the middle and what a hint opens
        appears below it without moving it. Once answered, all of it flows from
        the top. Mid-flip the back of the card lies over it. -->
-  <div class="turn">
+  <div class="turn" class:out={titleEnd} class:held style:--reach="{REACH_CH}ch">
     <div class="face" class:answered bind:this={faceEl}>
       {#if face.phase === 'ready'}
         <!-- The whole face is the button, so Bereit! is easy to hit. -->
@@ -195,7 +180,7 @@
         <pre class="name" role="img" aria-label="nouritsu">{NAME_ART}</pre>
       </div>
     {/if}
-    <div class="scan" class:scanning bind:this={scanEl}></div>
+    <div class="scan" class:scanning></div>
   </div>
   <hr />
   <HintBar phase={session.phase} word={session.word} used={session.hints} {onHint} />
@@ -271,8 +256,9 @@
   /* The back of the card: the author's name, 41 columns fitted to the width
      (Iosevka's characters are half an em wide), in a Catppuccin rainbow from
      the top left to the bottom right. */
-  /* The side margins keep the name inside the line's reach (REACH_CH), so all of
-     it comes in behind the line. */
+  /* The back covers the card from its left edge up to the line (--reach in from
+     either edge, under the title's K). The side margins keep the name inside the
+     line's reach, so all of it comes in behind the line. */
   .back {
     position: absolute;
     inset: 0;
@@ -281,6 +267,17 @@
     place-items: center;
     background: var(--bg);
     container-type: inline-size;
+    clip-path: inset(0 calc(100% - var(--reach)) 0 0);
+    transition: clip-path 0.4s linear;
+  }
+
+  .out .back {
+    clip-path: inset(0 var(--reach) 0 0);
+  }
+
+  .held .back {
+    clip-path: none;
+    transition: none;
   }
 
   .name {
@@ -304,12 +301,14 @@
   }
 
   /* The scan line: a bright bar in the accent colour, glowing. It reaches up to
-     the title on the border, which travels with it. */
+     the title on the border and travels under its K, from the first letter of
+     Karte to the last of etraK and back. */
   .scan {
     position: absolute;
     top: -0.15em;
     bottom: 0;
-    left: 0;
+    left: var(--reach);
+    transition: left 0.4s linear;
     width: 0.5ch;
     transform: translateX(-50%);
     background: var(--accent);
@@ -320,6 +319,10 @@
 
   .scan.scanning {
     visibility: visible;
+  }
+
+  .out .scan {
+    left: calc(100% - var(--reach));
   }
 
   .center :global(.word) {
