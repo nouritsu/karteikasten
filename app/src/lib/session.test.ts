@@ -36,7 +36,7 @@ describe('session', () => {
     const s = new Session()
     s.words = deck('a')
     running(s, 0)
-    s.respond('know', 5000) // 3 s after the grace period: one step
+    s.respond('know', 5000) // 3 s after the grace period: two steps
     s.now = 60_000
     expect(s.score).toBe(90)
     s.next()
@@ -81,6 +81,6 @@ describe('session', () => {
     s.visibility(false, 600_000)
     s.respond('know', 601_000)
     expect(s.activeMs).toBe(4000)
-    expect(s.score).toBe(100)
+    expect(s.score).toBe(95) // 4 s active: one step after the grace period, not 600 s of decay
   })
 })

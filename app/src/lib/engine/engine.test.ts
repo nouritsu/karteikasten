@@ -8,13 +8,14 @@ describe('score', () => {
   it('stays full during the grace period', () => {
     expect(score(0, [])).toBe(100)
     expect(score(2000, [])).toBe(100)
-    expect(score(4999, [])).toBe(100)
+    expect(score(3499, [])).toBe(100)
   })
 
   it('loses a step per full interval after the grace period', () => {
+    expect(score(3500, [])).toBe(95)
     expect(score(5000, [])).toBe(90)
-    expect(score(8000, [])).toBe(80)
-    expect(score(2000 + 3000 * 7, [])).toBe(30)
+    expect(score(2000 + 1500 * 14, [])).toBe(30)
+    expect(score(2000 + 1500 * 20, [])).toBe(0)
   })
 
   it('charges each hint once', () => {

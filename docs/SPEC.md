@@ -77,6 +77,7 @@ D23–D26 were accepted after Phase 1 on 2026-10-06 (evidence in `reports/phase1
 | D36 | Answered word | The word keeps its size on the answer view; the meaning, forms and sentence follow below it. |
 | D37 | Thema animation | The Thema button takes the new theme first; then a Latte circle grows from it, or the Latte view shrinks into it and goes out. Without view transitions, or with reduced motion, the switch is instant. |
 | D38 | Card flip | Answering and Weiter turn the card over. A scan line carries the Karte title along the border to the right edge, the title shuffling into its mirror image (etraK); the line stays under the K, from the first letter at the start to the last at the end, and the back comes in behind the line: the author's name in ASCII art, a Catppuccin rainbow from top left to bottom right. Each character scrambles as the line passes. After about 0.4 s the line carries the title back to the left and the new front comes in behind it. The hint buttons stay put. With reduced motion the face changes at once. |
+| D39 | Score decay | The score loses 5 points every 1.5 s after the grace period instead of 10 every 3 s: the same rate in smaller, more frequent steps (D17's formula amended). |
 
 ## Implementation defaults
 
@@ -399,7 +400,7 @@ Weiter always returns to Bereit; the clock runs only in Läuft, and new words ta
 The clock pauses while the page is hidden (`visibilitychange`) and resumes when it is visible again.
 
 ```latex
-\text{score} = \min\left(100,\ \max\left(0,\ 100 - 10\left\lfloor \frac{\max(0,\ t_{\text{active}} - 2\,\text{s})}{3\,\text{s}} \right\rfloor - \sum \text{penalties}\right)\right)
+\text{score} = \min\left(100,\ \max\left(0,\ 100 - 5\left\lfloor \frac{\max(0,\ t_{\text{active}} - 2\,\text{s})}{1.5\,\text{s}} \right\rfloor - \sum \text{penalties}\right)\right)
 ```
 
 | Event | Effect |

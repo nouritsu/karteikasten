@@ -14,8 +14,8 @@ export interface ScoreSettings {
 
 export const DEFAULT_SCORE: ScoreSettings = {
   start: 100,
-  step: 10,
-  intervalMs: 3000,
+  step: 5, // D39: half the step twice as often, the same rate as 10 per 3 s
+  intervalMs: 1500,
   graceMs: 2000,
   penalties: { audio: 10, forms: 15, sentence: 20, picture: 50, cognate: 30 },
   bands: { good: 40, easy: 85 },
