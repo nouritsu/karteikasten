@@ -124,17 +124,57 @@
 }
 
 /* The Thema reveal: a circle of the new theme grows from the button (to Latte),
-   or the old Latte view shrinks into it (to Mocha). theme.ts animates the
-   clip-path; this drops the default cross-fade, puts the shrinking old view on
-   top, and holds colour transitions so nothing fades inside the circle. */
-::view-transition-old(root),
-::view-transition-new(root) {
-  animation: none;
-  mix-blend-mode: normal;
+   or the old Latte view shrinks into it (to Mocha). While it runs, the root
+   stays out of the view transition and the body is captured under its theme's
+   name, so each view gets its own group; the body takes the background so both
+   views are opaque. The Latte view's image pair is the circle: centred on the
+   button, with a radius that covers the page, and the view inside it pinned to
+   the page (theme.ts sets the --reveal-* lengths). theme.ts scales the circle
+   and the view in opposite directions: transform animations run on the
+   compositor, where an animated clip-path repaints every frame. Colour
+   transitions are held so nothing fades inside the circle. */
+:root[data-reveal] {
+  view-transition-name: none;
 }
 
-:root[data-reveal='shrink']::view-transition-old(root) {
+:root[data-reveal] body {
+  background: var(--bg);
+}
+
+:root[data-reveal][data-theme='latte'] body {
+  view-transition-name: latte;
+}
+
+:root[data-reveal][data-theme='mocha'] body {
+  view-transition-name: mocha;
+}
+
+::view-transition-old(*),
+::view-transition-new(*) {
+  animation: none;
+}
+
+::view-transition-group(latte) {
   z-index: 1;
+}
+
+::view-transition-image-pair(latte) {
+  inset: auto;
+  left: calc(var(--reveal-x) - var(--reveal-r));
+  top: calc(var(--reveal-y) - var(--reveal-r));
+  width: calc(2 * var(--reveal-r));
+  height: calc(2 * var(--reveal-r));
+  border-radius: 50%;
+  overflow: clip;
+}
+
+::view-transition-old(latte),
+::view-transition-new(latte) {
+  left: calc(var(--reveal-r) - var(--reveal-x));
+  top: calc(var(--reveal-r) - var(--reveal-y));
+  width: var(--reveal-w);
+  height: var(--reveal-h);
+  transform-origin: var(--reveal-x) var(--reveal-y);
 }
 
 :root[data-reveal] *,
