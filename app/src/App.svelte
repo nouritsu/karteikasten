@@ -151,7 +151,7 @@
        and score never shrink below their content. */
     grid-template-rows: minmax(min-content, 20fr) 60fr minmax(min-content, 10fr) auto;
     gap: 1em;
-    padding: 1em 0.6em calc(0.6em + env(safe-area-inset-bottom));
+    padding: calc(1em + var(--inset-top)) 0.6em calc(0.6em + var(--inset-bottom));
     box-sizing: border-box;
   }
 

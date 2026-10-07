@@ -112,6 +112,10 @@
 
 :root {
   --radius: 0.6em;
+  /* The app draws under the system bars (D40). Capacitor's SystemBars sets
+     --safe-area-inset-* where the WebView's env() values are wrong. */
+  --inset-top: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
+  --inset-bottom: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
   font-family: 'Iosevka', 'Noto Symbols', ui-monospace, monospace;
   font-size: 16px;
   line-height: 1.3;

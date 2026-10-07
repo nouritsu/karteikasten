@@ -2,6 +2,8 @@
 // sets the first theme before the page paints: the saved choice, else Mocha.
 // Thema switches between them and saves the choice.
 
+import { Capacitor, SystemBars, SystemBarsStyle } from '@capacitor/core'
+
 export type Theme = 'latte' | 'mocha'
 export const THEMES: Theme[] = ['latte', 'mocha']
 
@@ -17,8 +19,15 @@ export function applyTheme(theme: Theme): void {
   document.documentElement.dataset.theme = theme
 }
 
-/** The phone's status bar takes the theme's background. */
+/** The phone's status bar follows the theme: in the app the page shows through
+ *  it and its icons turn light on Mocha, dark on Latte; in a browser it takes
+ *  the theme's background. */
 export function paintStatusBar(): void {
+  if (Capacitor.isNativePlatform()) {
+    const style = currentTheme() === 'mocha' ? SystemBarsStyle.Dark : SystemBarsStyle.Light
+    void SystemBars.setStyle({ style })
+    return
+  }
   const background = getComputedStyle(document.documentElement).backgroundColor
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', background)
 }

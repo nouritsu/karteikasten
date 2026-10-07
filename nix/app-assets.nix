@@ -2,7 +2,9 @@
 # - Iosevka (SIL OFL 1.1, no Reserved Font Name) subset to the scripts the app shows;
 # - the ⏾ ☼ 🕮 icons from Noto Sans Symbols 2 (SIL OFL 1.1): Iosevka lacks 🕮 and
 #   draws the moon and sun too small;
-# - PWA icons rendered from app/icon.svg.
+# - PWA icons rendered from app/icon.svg;
+# - the Android launcher icons from the same file (D40): 48 dp legacy icons and the
+#   108 dp adaptive foreground, whose card already sits in the central safe zone.
 # In development: nix build .#app-assets -o app/public/generated
 {
   fetchurl,
@@ -35,6 +37,24 @@
     "U+26AF"
     "U+26ED"
   ];
+  # Android density buckets and their scale over mdpi.
+  densities = {
+    mdpi = 1;
+    hdpi = 1.5;
+    xhdpi = 2;
+    xxhdpi = 3;
+    xxxhdpi = 4;
+  };
+  launcherIcons = lib.concatStrings (lib.mapAttrsToList (density: scale: let
+      dir = "$out/android/mipmap-${density}";
+      px = dp: toString (builtins.ceil (dp * scale));
+    in ''
+      mkdir -p ${dir}
+      vips thumbnail ${../app/icon.svg} "${dir}/ic_launcher.png[strip]" ${px 48}
+      cp ${dir}/ic_launcher.png ${dir}/ic_launcher_round.png
+      vips thumbnail ${../app/icon.svg} "${dir}/ic_launcher_foreground.png[strip]" ${px 108}
+    '')
+    densities);
   subset = weight: ''
     pyftsubset ${iosevka-bin}/share/fonts/truetype/Iosevka-${weight}.ttc \
       --font-number=0 --unicodes=${unicodes} --flavor=woff2 \
@@ -61,4 +81,5 @@ in
     for size in 192 512; do
       vips thumbnail ${../app/icon.svg} "$out/icons/icon-$size.png[strip]" $size
     done
+    ${launcherIcons}
   ''

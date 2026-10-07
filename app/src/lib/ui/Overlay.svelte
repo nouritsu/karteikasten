@@ -29,7 +29,7 @@
     display: flex;
     align-items: flex-end;
     background: color-mix(in srgb, var(--bg) 55%, transparent);
-    padding: 1.2em 0.6em calc(0.6em + env(safe-area-inset-bottom));
+    padding: calc(1.2em + var(--inset-top)) 0.6em calc(0.6em + var(--inset-bottom));
   }
 
   .sheet {
