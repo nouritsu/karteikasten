@@ -17,7 +17,7 @@ Build Karteikasten phase by phase (see Phases), stop at each phase's acceptance 
 
 ## Product summary
 
-Karteikasten is a phone-only, installable PWA that teaches the top n German words (default 2,000) with homely, ratatui-styled flashcards built only from openly licensed data.
+Karteikasten is a phone-only Android app (D40) that teaches the top n German words (default 2,000) with homely, ratatui-styled flashcards built only from openly licensed data.
 
 - Frequency: a spoken-weighted blend of subtitle and news/web corpora, lemmatized with Wiktionary.
 - Per word: type, gender, IPA with syllables and stress, audio, picture (concrete nouns), key forms and full tables, meaning (English and German, toggle), example sentences, English cognate hint.
@@ -57,7 +57,7 @@ All 22 decisions are final; D19 was not answered, so it takes the recommended de
 
 ### Amendments
 
-D23–D26 were accepted after Phase 1 on 2026-10-06 (evidence in `reports/phase1-coverage.md`); D27–D36 come from your Phase 2 review on 2026-10-07. The sections below are amended where they apply and marked with the decision's id.
+D23–D26 were accepted after Phase 1 on 2026-10-06 (evidence in `reports/phase1-coverage.md`); D27–D39 come from your Phase 2 review on 2026-10-07; D40–D45 from your request for an APK the same day. The sections below are amended where they apply and marked with the decision's id.
 
 | ID | Topic | Decision |
 | --- | --- | --- |
@@ -78,32 +78,38 @@ D23–D26 were accepted after Phase 1 on 2026-10-06 (evidence in `reports/phase1
 | D37 | Thema animation | The Thema button takes the new theme first; then a Latte circle grows from it, or the Latte view shrinks into it and goes out. Without view transitions, or with reduced motion, the switch is instant. |
 | D38 | Card flip | Answering and Weiter turn the card over. A scan line carries the Karte title along the border to the right edge, the title shuffling into its mirror image (etraK); the line stays under the K, from the first letter at the start to the last at the end, and the back comes in behind the line: the author's name in ASCII art, a Catppuccin rainbow from top left to bottom right. Each character scrambles as the line passes. After about 0.4 s the line carries the title back to the left and the new front comes in behind it. The hint buttons stay put. With reduced motion the face changes at once. |
 | D39 | Score decay | The score loses 5 points every 1.5 s after the grace period instead of 10 every 3 s: the same rate in smaller, more frequent steps (D17's formula amended). |
+| D40 | Distribution | An Android APK replaces the PWA: Capacitor wraps the same Svelte build in a WebView, so nobody installs from a website. `vite-plugin-pwa` and the service worker go. Amends D1 and D3; iOS and desktop are out of scope. |
+| D41 | Deck delivery | The deck is bundled in the APK under `/deck/`, so the app is offline from first launch; a new deck ships as a new APK. The Pi module and `deploy-deck` go. |
+| D42 | APK build | Nix builds the APK: `packages.apk` runs Gradle offline against a `gradle.fetchDeps` lockfile and the Android SDK from `androidenv`. `nix run .#apk` adds the working tree's deck, signs and optionally installs. |
+| D43 | Audience and signing | Sideloaded to your phone and friends' (adb or the file). Signed with this machine's Android debug key (`~/.android/debug.keystore`) outside the Nix store; keep that file, since updates need the same key. The `personal` profile stays (D26). |
+| D44 | Application id | `com.nouritsu.karteikasten`. It never changes: another id is another app, with empty progress. |
+| D45 | APK versions | versionName is the app version plus the deck version (`0.1.0+2026.10.06-bdc9ce1`); versionCode is the commit count, so a new deck without a new commit needs `--version-code`. |
 
 ## Implementation defaults
 
 These choices fill gaps the decisions leave open; change any of them without a new decision, but note the change in the commit or PR.
 
-- Package name `karteikasten`; the app lives at `/`, deck data at `/deck/`.
-- App: Svelte 5 + Vite (no SvelteKit), `vite-plugin-pwa` (Workbox), `idb` for IndexedDB, Vitest, npm with `package-lock.json` (built with `buildNpmPackage`).
+- Package name `karteikasten`, application id `com.nouritsu.karteikasten` (D44); inside the APK the app lives at `/`, deck data at `/deck/`.
+- App: Svelte 5 + Vite (no SvelteKit), Capacitor for Android (D40), `idb` for IndexedDB, Vitest, npm with `package-lock.json` (built with `buildNpmPackage`).
 - Styling: small hand-rolled CSS components (Block with inset title, Button, Bar, Table). `@webtui/css` is only a visual reference.
 - Font: Iosevka (SIL OFL), subset to Latin, Latin Extended-A, IPA Extensions, Spacing Modifier Letters, Combining Diacritical Marks, General Punctuation, Box Drawing and Block Elements, plus ≈ and the icon symbols (D27). No emoji.
 - Themes: Catppuccin Mocha (dark, default) and Latte (light), mauve accent (D30).
 - Event ids are ULIDs; the day rolls over at 04:00 local time; desired retention is 0.9.
 - Audio plays once automatically after answering (setting, on by default).
 - Vulgar words stay in the deck, tagged from Wiktionary labels.
-- Hosting: Caddy on the Pi, TLS via Tailscale (`*.ts.net`) or ACME.
+- APK: Gradle and the Android SDK from nixpkgs, Maven dependencies pinned in `nix/apk-deps.json` (D42).
 - Tooling: `nixfmt`, `pytest`, `cargo test` + `clippy`, Python 3.12 or newer.
 
 ## Architecture and Nix
 
-The desktop pipeline builds a versioned deck bundle, the Pi serves the app shell and the deck, and the phone keeps all progress locally as an append-only review log.
+The desktop pipeline builds a versioned deck bundle, Nix packs it with the app into an APK (D41), and the phone keeps all progress locally as an append-only review log.
 
 &#91;embedded content: system overview · desktop, Pi, phone\]
 
-Data moves left to right on the desktop, down to the Pi, and into the phone; progress only leaves the phone as an export file.
+Data moves left to right on the desktop and into the phone with each APK; progress only leaves the phone as an export file.
 
 - Pipeline (desktop): Python + DuckDB, run with `nix run .#build`. Its only output contract is the deck bundle.
-- App shell and deck deploy separately: the app is a Nix package, the deck is a data directory on the Pi. A new deck never needs an app rebuild.
+- App and deck ship together: the web build is a Nix package, and `nix run .#apk` bundles it with a deck from `data/dist/deck/` (D41).
 - Phone: progress lives in IndexedDB as review events; card state is derived and cached.
 - Curation tool (desktop): reads the curation database and writes `overrides/*.toml`, which the next build applies.
 
@@ -116,10 +122,10 @@ karteikasten/
 ├─ .envrc                 # use flake
 ├─ nix/                   # dendritic: every file is a flake-parts module
 │  ├─ devshell.nix
-│  ├─ pipeline.nix        # apps: fetch, build, report, deploy-deck
-│  ├─ app.nix             # packages.app (static PWA)
+│  ├─ pipeline.nix        # apps: fetch, build, report
+│  ├─ app.nix             # packages.app (static web build)
+│  ├─ apk.nix             # packages.apk (Capacitor + Gradle)
 │  ├─ curate.nix          # packages.curate (ratatui tool)
-│  └─ server.nix          # flake.modules.nixos.karteikasten
 ├─ config/pipeline.toml   # n_max, blend weight, profile, thresholds
 ├─ sources.lock.json      # url, retrieved_at, bytes, sha256 per raw file
 ├─ pipeline/              # Python package; deps come from Nix
@@ -133,6 +139,7 @@ karteikasten/
 │  └─ audio/              # own recordings
 ├─ curate/                # Rust + ratatui
 ├─ app/                   # Svelte 5 + Vite
+│  ├─ android/            # Capacitor's Android project
 │  └─ src/lib/{engine,store,ui,i18n}/
 ├─ docs/                  # SPEC.md (export of this doc), sources/*.md
 ├─ reports/               # coverage and diff reports
@@ -145,10 +152,10 @@ karteikasten/
 Nix modules:
 
 - `devshell.nix`: `python3.withPackages` (duckdb, httpx, pytest, a CoNLL-U reader or a small parser), `duckdb` CLI, `sqlite`, `ffmpeg`, `vips`, Node.js LTS, Rust toolchain (cargo, rustc, clippy, rustfmt, rust-analyzer).
-- `pipeline.nix`: fish wrappers via `pkgs.writers.writeFishBin` around the Python CLI, exposed as `nix run .#fetch`, `.#build`, `.#report`, `.#deploy-deck`.
+- `pipeline.nix`: fish wrappers via `pkgs.writers.writeFishBin` around the Python CLI, exposed as `nix run .#fetch`, `.#build`, `.#report`.
 - `app.nix`: `packages.app` via `buildNpmPackage`; output is static files.
+- `apk.nix`: `packages.apk`, an unsigned release APK; `nix run .#apk` signs it (D42, D43).
 - `curate.nix`: `packages.curate` via `rustPlatform.buildRustPackage`, runnable as `nix run .#curate`.
-- `server.nix`: `flake.modules.nixos.karteikasten`, imported by the Pi's system flake.
 
 Flake builds only see git-tracked files, and `data/` is gitignored, so the pipeline runs via `nix run` in the working tree. Determinism comes from `sources.lock.json` and `flake.lock`, not from the Nix sandbox.
 
@@ -432,8 +439,8 @@ Scheduling:
 Storage and offline:
 
 - IndexedDB stores: `events`, `cards` (derived cache), `settings`, `meta`. Call `navigator.storage.persist()` on first run.
-- Deck loading: `/deck/latest.json` → `/deck/<v>/manifest.json` + `words.json`. Media for all n words downloads in the background, with progress shown in Info; versioned deck files are cache-first.
-- New deck version: prompt "Neue Kartendaten verfügbar", download, then switch. Progress follows stable ids; orphaned ids keep their history and are listed, never deleted.
+- Deck loading: `/deck/latest.json` → `/deck/<v>/manifest.json` + `words.json`, all inside the APK (D41).
+- New deck version: arrives with an APK update. Progress follows stable ids; orphaned ids keep their history and are listed, never deleted.
 
 Event shape:
 
@@ -508,16 +515,14 @@ Haptics: one short vibration on Weiß ich and a double one on Weiß ich nicht, w
 | Blocking | Noun without gender or plural; verb without Partizip II or auxiliary; no English gloss; any item without licence or author |
 | Warning | No audio; no sentence; concrete noun with an unapproved image; syllable/stress mismatch; audio duration outlier; orphaned override |
 
-## Deployment on the Pi
+## APK
 
-The Pi imports `flake.modules.nixos.karteikasten`, which serves the app from the Nix store and decks from `/var/lib/karteikasten/deck` through Caddy.
+Nix builds the APK and signs it with this machine's debug key; it is installed by hand (D40–D45).
 
-- Module options: `enable`, `hostName`, `deckDir` (default `/var/lib/karteikasten/deck`), `package`, TLS mode (Tailscale or ACME).
-- Caddy routes `/` to the app and `/deck/` to `deckDir`.
-- Caching: `index.html`, `sw.js`, the web manifest and `latest.json` are `no-cache`; hashed assets and versioned deck files are immutable. Set MIME types for `webmanifest`, `mp3`, `webp` and `svg`.
-- Tailscale TLS: use the machine's `*.ts.net` name and set `services.tailscale.permitCertUid = "caddy"`.
-- `nix run .#deploy-deck -- <host>` rsyncs the bundle to `deckDir/<version>/`, then updates `latest.json`.
-- Optional weekly refresh (systemd timer on desktop or Pi): `fetch --refresh`, build, and a diff report in `reports/`. It never publishes on its own.
+- `packages.apk`: `app/` with its `android/` Capacitor project, the web build from `packages.app` and a deck, built by Gradle offline. Maven artefacts come from `nix/apk-deps.json`; refresh it after changing Capacitor or Gradle versions with `nix build .#apk.mitmCache.updateScript && ./result`.
+- `nix run .#apk -- [--deck VERSION] [--version-code N] [--install]`: bundles the deck named by `data/dist/deck/latest.json` (or VERSION), signs with `~/.android/debug.keystore` (created if missing), writes `data/dist/apk/karteikasten-<versionName>.apk`, and with `--install` runs `adb install -r`.
+- Friends get the APK file; Android asks once to allow installs from the app that opens it.
+- Optional weekly refresh (systemd timer on the desktop): `fetch --refresh`, build, and a diff report in `reports/`. It never publishes on its own.
 
 ## Licensing and attribution
 
@@ -557,15 +562,15 @@ Phase 0 unlocks both spikes, and Phase 3 starts only after the coverage report a
   - Curation tool with issue queue, pickers and recorder; automated checks; build-to-build diff report.
   - Done when the top 500 words have no blocking issues and every concrete noun's image is approved or rejected.
 - Phase 5 · Core study loop
-  - Engine: score state machine, grade bands, queue, ts-fsrs adapter, 04:00 rollover. Storage; deck loader with media precache and updates.
+  - Engine: score state machine, grade bands, queue, ts-fsrs adapter, 04:00 rollover. Storage; deck loader (D41).
   - Full card flow including Intro, Kenne ich schon, undo, dynamic sentence choice, EN/DE toggle, pause while hidden, haptics.
   - Done when Vitest covers decay, penalties, bands, undo, pause, queue and replay; export → wipe → import restores identical state; a week of real daily use loses nothing.
 - Phase 6 · Screens and polish
   - Statistik, Wörter, Suche, Optionen, Thema (Latte and Mocha), Info, word of the day, Feierabend!, reduced motion, font size.
   - Done when every string is in the i18n files, every screen works one-handed, and attribution is complete.
 - Phase 7 · Deploy and data lifecycle
-  - Final server module, `deploy-deck`, in-app deck update prompt, export nudge, optional weekly refresh with a diff.
-  - Done when the Pi config imports the module, the phone reaches the app over HTTPS, and a changed deck installs with progress intact.
+  - Export nudge, optional weekly refresh with a diff (D41).
+  - Done when an APK with a changed deck installs over the old one with progress intact.
 - Phase 8 · Backlog: only on request (see Backlog).
 
 ## Testing
@@ -621,6 +626,5 @@ None of these get built until you ask for them.
 - Personal notes and mnemonics per word.
 - Swipe gestures for the answer buttons.
 - Automated Syncthing sync.
-- APK wrapper (TWA, Capacitor or Tauri).
 - Commons photos via Wikidata if pictogram coverage falls short.
 - A setting to hide vulgar words.
