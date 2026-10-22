@@ -42,6 +42,7 @@ export function keyFormLines(word: DeckWord, t: Strings): string[] {
         flags.has('strong') && f.strong,
         flags.has('weak') && f.weak,
         flags.has('mixed') && f.mixed,
+        flags.has('preterite_present') && f.preteritePresent,
       ].filter((kind): kind is string => Boolean(kind))
       if (past.length || kinds.length) lines.push([...past, ...kinds].join(' · '))
       break
@@ -51,6 +52,11 @@ export function keyFormLines(word: DeckWord, t: Strings): string[] {
       const cases = Array.isArray(k.cases) ? k.cases : []
       if (k.case === 'two-way') lines.push(`${f.governs} ${f.twoWay}`)
       else if (cases.length) lines.push(`${f.governs} ${cases.map((c) => f.cases[c] ?? c).join(' / ')}`)
+      if (Array.isArray(k.contractions) && k.contractions.length) lines.push(`${f.contractions}: ${k.contractions.join(', ')}`)
+      break
+    }
+    case 'num': {
+      if (k.ordinal) lines.push(`${f.ordinal}: ${one(k.ordinal)}`)
       break
     }
     case 'conj': {

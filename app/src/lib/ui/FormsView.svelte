@@ -19,6 +19,11 @@
     person: string
     form: string | null
   }
+  // Articles, determiners and pronouns: case x gender/number (m f n pl, or sg pl).
+  interface CaseTable {
+    columns: string[]
+    rows: { case: string; cells: (string | null)[] }[]
+  }
 
   const declension = $derived((word.tables.declension as DeclensionRow[] | undefined) ?? [])
   const conjugation = $derived(
@@ -33,6 +38,7 @@
       .map(([key, label]) => ({ label, rows: (word.tables[key] as PersonRow[] | undefined) ?? [] }))
       .filter((table) => table.rows.some((row) => row.form)),
   )
+  const caseTable = $derived(word.tables.cases as CaseTable | undefined)
   const lines = $derived(keyFormLines(word, i18n.t))
 
   function cell(c: DeclensionCell | null): string {
@@ -53,6 +59,20 @@
   </table>
 {/if}
 
+{#if caseTable}
+  <table class="cases">
+    <thead><tr><th></th>{#each caseTable.columns as column (column)}<th>{t.columns[column] ?? column}</th>{/each}</tr></thead>
+    <tbody>
+      {#each caseTable.rows as row (row.case)}
+        <tr>
+          <th>{t.caseNames[row.case] ?? row.case}</th>
+          {#each row.cells as form, i (i)}<td>{form ?? '–'}</td>{/each}
+        </tr>
+      {/each}
+    </tbody>
+  </table>
+{/if}
+
 {#each conjugation as table (table.label)}
   <table>
     <caption>{table.label}</caption>
@@ -64,7 +84,7 @@
   </table>
 {/each}
 
-{#if !lines.length && !declension.length && !conjugation.length}<p class="muted">{t.none}</p>{/if}
+{#if !lines.length && !declension.length && !caseTable && !conjugation.length}<p class="muted">{t.none}</p>{/if}
 
 <style>
   p {
@@ -92,5 +112,10 @@
   th {
     color: var(--muted);
     min-width: 10ch;
+  }
+
+  /* Four form columns have to fit the phone's width. */
+  .cases th {
+    min-width: 0;
   }
 </style>

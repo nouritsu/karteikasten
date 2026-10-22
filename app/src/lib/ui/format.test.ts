@@ -43,6 +43,14 @@ describe('key form lines', () => {
       .toEqual(['unterordnend (Verb am Ende)'])
   })
 
+  it('shows the preterite-present class, contractions and ordinals', () => {
+    const koennen = word({ pos: 'verb', flags: ['preterite_present'], key_forms: { er: 'kann', praeteritum: 'konnte' } })
+    expect(keyFormLines(koennen, de)).toEqual(['er kann', 'Prät. konnte · Präteritopräsens'])
+    const in_ = word({ pos: 'prep', key_forms: { case: 'two-way', cases: ['acc', 'dat'], contractions: ['im', 'ins'] } })
+    expect(keyFormLines(in_, de)).toEqual(['mit Akk/Dat (Wechselpräposition)', 'Kurzformen: im, ins'])
+    expect(keyFormLines(word({ pos: 'num', key_forms: { ordinal: 'zweite' } }), de)).toEqual(['Ordinalzahl: zweite'])
+  })
+
   it('colours articles by gender, plural-only in its own colour', () => {
     expect(genderClass(word({ gender: 'n' }))).toBe('das')
     expect(genderClass(word({ flags: ['plural_only'] }))).toBe('plural')
