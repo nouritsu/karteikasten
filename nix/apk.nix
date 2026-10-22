@@ -54,6 +54,11 @@ in
       "-Pandroid.aapt2FromMavenOverride=${sdk}/build-tools/${buildToolsVersion}/aapt2"
       "-PversionCode=${toString versionCode}"
       "-PversionName=${finalAttrs.version}"
+      # Release lint looks up newer library versions in Google's Maven indexes and the
+      # Play SDK index. Those files change upstream every few days, so pinning them in
+      # apk-deps.json broke the build within a week each time.
+      "-x"
+      "lintVitalRelease"
     ];
     gradleBuildTask = "assembleRelease";
     # Android variants make the default nixDownloadDeps ambiguous; record a real build.
