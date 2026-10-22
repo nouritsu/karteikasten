@@ -4,14 +4,19 @@ Nothing here is invented: a field the data does not have stays empty and shows
 up in the coverage report. Every field records which edition it came from.
 
 - English edition: POS, gender, flags (weak noun, plural only, reflexive,
-  strong/weak verb), key forms and English glosses, cognate from the etymology.
+  strong/weak/mixed or preterite-present verb), key forms and English glosses,
+  cognate from the etymology (kept only when the English word is among the
+  word's own English glosses, D49), ordinals of numerals.
 - German edition: German definitions, IPA (Germany standard), hyphenation,
-  conjunction type (Subjunktion vs Konjunktion), case a preposition governs,
-  noun declension tables with articles.
+  noun declension tables with articles, case tables of articles, determiners
+  and pronouns.
+- Both editions: the case a preposition governs and a conjunction's type, from
+  their categories and sense tags. These are hand-checked in
+  overrides/closed_classes.toml, which wins (`apply_closed_classes`).
 """
 
 import re
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
@@ -40,6 +45,25 @@ INFLECTED_TITLES = frozenset({"Deklinierte Form", "Konjugierte Form", "Partizip 
 COGNATE = re.compile(
     r"(?:[Cc]ognate with|[Cc]ompare|[Aa]kin to|[Rr]elated to)\b[^.;]*?(?<!Old )(?<!Middle )\bEnglish ([A-Za-z][\w'-]*)"
 )
+# Further English words in the same clause: "Compare Dutch twee, English two, twain".
+COGNATE_MORE = re.compile(r"(?:,| and| or)\s+([a-z][\w'-]*)")
+GLOSS_WORD = re.compile(r"[a-z][a-z'-]*")
+CASE_WORDS = {"nominative": "nom", "accusative": "acc", "dative": "dat", "genitive": "gen"}
+GERMAN_CASE_WORDS = {"Nominativ": "nom", "Akkusativ": "acc", "Dativ": "dat", "Genitiv": "gen"}
+GOVERNING = re.compile(r"^German (?:pre|post)positions governing the (\w+)$")
+# German-edition notes on a case that is colloquial, regional or old: a secondary case.
+SECONDARY = re.compile(
+    r"umgangssprachlich|salopp|seltener|selten|älter|veraltet|antiquiert|regional|Schweiz|Österreich|Süddeutschland"
+)
+CONJUNCTION_CATEGORIES = {
+    "German coordinating conjunctions": "coordinating",
+    "German subordinating conjunctions": "subordinating",
+    "Konjunktion (Deutsch)": "coordinating",
+    "Subjunktion (Deutsch)": "subordinating",
+}
+TABLE_COLUMNS = (("m", {"masculine"}), ("f", {"feminine"}), ("n", {"neuter"}))
+NOT_TABLE_FORM = frozenset({"alternative", "obsolete", "archaic", "abbreviation", "variant", "dated", "colloquial",
+                            "error-unrecognized-form", "table-tags", "inflection-template", "personal"})
 FOOTNOTE = re.compile(r"\^\(\[[^\]]*\]\)|\[\d+[a-z]?\]")
 IPA_VOWELS = set("aeiouyæøœɐɑɒɔəɛɜɪʊʏʌɯɨʉ")
 IPA_STRESS = "\u02c8"
@@ -75,6 +99,7 @@ class Card:
     gloss_de: list[Gloss] = field(default_factory=list)
     sources: dict[str, str] = field(default_factory=dict)  # field -> where it came from
     issues: list[str] = field(default_factory=list)  # for the coverage report
+    cognates_raw: list[str] = field(default_factory=list)  # every etymology cognate, before D49
 
     def as_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -160,7 +185,9 @@ def noun(card: Card, en: list[dict], de: list[dict]) -> None:
         card.flags.append("weak_noun")
     if {"no-plural", "singular-only", "uncountable"} & set(tags) and "plural-only" not in tags:
         card.flags.append("singular_only")
-    plurals = _forms(en, "plural", exclude=("diminutive", "genitive", "dative", "accusative", "definite"))
+    plurals = _forms(en, "plural", exclude=("diminutive", "genitive", "dative", "accusative", "definite")) or [
+        f for f in _forms(en, "nominative", "plural", exclude=("diminutive", "indefinite")) if f not in ("-", "—")
+    ]  # some nouns list the plural only in their table: Herzen, Schätze
     genitives = _forms(en, "genitive", exclude=("plural", "diminutive", "definite", "indefinite"))
     if plurals and "plural_only" not in card.flags:
         card.key_forms["plural"] = plurals[0]
@@ -204,7 +231,9 @@ def verb(card: Card, en: list[dict], separable: str | None) -> None:
     if "reflexive" in main_tags:
         card.flags.append("reflexive")
     head = " ".join(h.get("expansion", "") for e in en for h in e.get("head_templates", []))
-    if "strong" in tags or " strong" in head:
+    if "preterite-present" in tags or "preterite-present" in head:
+        card.flags.append("preterite_present")  # the modals and wissen: kann, konnte, gekonnt
+    elif "strong" in tags or " strong" in head:
         card.flags.append("strong")
     elif "irregular" in tags or "mixed" in tags or "irregular" in head:
         card.flags.append("mixed")
@@ -285,34 +314,186 @@ def adverb(card: Card, en: list[dict]) -> None:
         card.sources["key_forms"] = "kaikki-en"
 
 
-def preposition(card: Card, de: list[dict]) -> None:
-    tags = {t for e in de for s in e.get("senses", []) for t in s.get("tags", [])}
-    raw = " ".join(t for e in de for s in e.get("senses", []) for t in s.get("raw_tags", []))
-    found = {}
-    for case, tag, word in (("acc", "with-accusative", "Akkusativ"), ("dat", "with-dative", "Dativ"),
-                            ("gen", "with-genitive", "Genitiv")):
-        if tag in tags:
-            found[case] = -1
-        elif word in raw:
-            found[case] = raw.index(word)
-    cases = sorted(found, key=found.get)  # tagged cases first, then in the order the text names them
+def _categories(entries: Iterable[dict]) -> list[str]:
+    names = []
+    for entry in entries:
+        for category in entry.get("categories", []) + [c for s in entry.get("senses", []) for c in s.get("categories", [])]:
+            name = category if isinstance(category, str) else category.get("name", "")
+            if name and name not in names:
+                names.append(name)
+    return names
+
+
+@dataclass
+class CaseEvidence:
+    """What both editions say about the cases a preposition governs."""
+
+    en: list[str] = field(default_factory=list)  # English-edition categories
+    de_main: list[str] = field(default_factory=list)  # German-edition tags and plain notes, in order
+    de_secondary: list[str] = field(default_factory=list)  # German notes calling a case colloquial, regional, old
+    notes: list[str] = field(default_factory=list)  # the German notes themselves
+
+    def cases(self) -> list[str]:
+        """The German edition's main cases first (it says which case is colloquial),
+        then the English edition's, then the German secondary ones."""
+        ordered: list[str] = []
+        for case in self.de_main + self.en + self.de_secondary:
+            if case not in ordered:
+                ordered.append(case)
+        return ordered
+
+    def agree(self) -> bool:
+        """False only when both editions name cases and the cases differ."""
+        de = set(self.de_main) | set(self.de_secondary)
+        return not self.en or not de or set(self.en) == de
+
+
+def case_evidence(en: list[dict], de: list[dict]) -> CaseEvidence:
+    evidence = CaseEvidence()
+    for name in _categories(en):
+        if (match := GOVERNING.match(name)) and match.group(1) in CASE_WORDS:
+            case = CASE_WORDS[match.group(1)]
+            if case not in evidence.en:
+                evidence.en.append(case)
+    for entry in de:
+        for sense in entry.get("senses", []):
+            for tag in sense.get("tags", []):  # "with-dative", "dative", "genitive prepositional"
+                for word, case in CASE_WORDS.items():
+                    if word in tag.replace("-", " ").split() and case not in evidence.de_main:
+                        evidence.de_main.append(case)
+            for note in sense.get("raw_tags", []):
+                named = sorted((note.index(w), c) for w, c in (GERMAN_CASE_WORDS | CASE_WORDS).items() if w in note)
+                if not named:
+                    continue
+                if note not in evidence.notes:
+                    evidence.notes.append(note)
+                target = evidence.de_secondary if SECONDARY.search(note) else evidence.de_main
+                for _, case in named:
+                    if case not in target:
+                        target.append(case)
+    evidence.de_secondary = [c for c in evidence.de_secondary if c not in evidence.de_main]
+    return evidence
+
+
+def set_cases(card: Card, cases: list[str], source: str) -> None:
+    card.key_forms["case"] = "two-way" if {"acc", "dat"} <= set(cases[:2]) else cases[0]
+    card.key_forms["cases"] = list(cases)
+    card.sources["case"] = source
+
+
+def preposition(card: Card, en: list[dict], de: list[dict], contractions: list[str]) -> None:
+    cases = case_evidence(en, de).cases()
     if cases:
-        card.key_forms["case"] = "two-way" if set(cases) >= {"acc", "dat"} else cases[0]
-        card.key_forms["cases"] = cases
-        card.sources["key_forms"] = "kaikki-de (unchecked; closed_classes.toml decides)"
+        set_cases(card, cases, "kaikki-en categories, kaikki-de tags (unchecked)")
+    if contractions:
+        card.key_forms["contractions"] = list(contractions)
+        card.sources["contractions"] = "kaikki-en contraction entries"
 
 
-def conjunction(card: Card, de: list[dict]) -> None:
-    kinds = []
+@dataclass
+class ConjunctionEvidence:
+    en: list[str] = field(default_factory=list)  # from English-edition categories
+    de: list[str] = field(default_factory=list)  # from German-edition categories and pos_title, current senses
+
+    def kind(self) -> str | None:
+        """The English edition when it names one type, else the German edition's first."""
+        if len(self.en) == 1:
+            return self.en[0]
+        return self.de[0] if self.de else (self.en[0] if self.en else None)
+
+    def agree(self) -> bool:
+        """False only when both editions name a type and the types differ."""
+        return not self.en or not self.de or set(self.en) == set(self.de)
+
+
+def conjunction_evidence(en: list[dict], de: list[dict]) -> ConjunctionEvidence:
+    evidence = ConjunctionEvidence()
+    for name in _categories(en):
+        kind = CONJUNCTION_CATEGORIES.get(name)
+        if kind and name.startswith("German ") and kind not in evidence.en:
+            evidence.en.append(kind)
     for entry in de:
         current = [s for s in entry.get("senses", []) if not set(s.get("tags", [])) & (NOT_CURRENT_TAGS | {"colloquial"})]
-        if current and entry.get("pos_title") == "Subjunktion":
-            kinds.append("subordinating")
-        elif current and entry.get("pos_title") == "Konjunktion":
-            kinds.append("coordinating")
-    if kinds:
-        card.key_forms["conjunction"] = kinds[0]
-        card.sources["key_forms"] = "kaikki-de"
+        kind = CONJUNCTION_CATEGORIES.get(f"{entry.get('pos_title')} (Deutsch)")
+        if current and kind and kind not in evidence.de:
+            evidence.de.append(kind)
+    return evidence
+
+
+def conjunction(card: Card, en: list[dict], de: list[dict]) -> None:
+    kind = conjunction_evidence(en, de).kind()
+    if kind:
+        card.key_forms["conjunction"] = kind
+        card.sources["conjunction"] = "kaikki-en categories, kaikki-de pos_title (unchecked)"
+
+
+def case_table(entries: Iterable[dict]) -> dict | None:
+    """Case x gender/number table of an article, determiner or pronoun: columns
+    m, f, n, pl when the forms carry a gender, else sg, pl (ich, wir)."""
+    cells: dict[tuple[str, str], str | None] = {}
+    gendered = False
+    for entry in entries:
+        for form in entry.get("forms", []):
+            tags = set(form.get("tags", []))
+            case = next((c for c in CASES if c in tags), None)
+            if not case or tags & NOT_TABLE_FORM:
+                continue
+            column = next((name for name, need in TABLE_COLUMNS if need <= tags and "plural" not in tags), None)
+            if column:
+                gendered = True
+            elif "plural" in tags:
+                column = "pl"
+            elif "singular" in tags:
+                column = "sg"
+            else:
+                continue
+            text = form.get("form", "").strip()
+            cells.setdefault((case, column), None if text in ("", "-", "—") else text)
+        if cells:
+            break  # one entry's table: the first edition and entry that has one
+    if not any(cells.values()):
+        return None
+    columns = ["m", "f", "n", "pl"] if gendered else ["sg", "pl"]
+    return {
+        "columns": columns,
+        "rows": [{"case": case, "cells": [cells.get((case, column)) for column in columns]} for case in CASES],
+    }
+
+
+def ordinal(numeral: str, en: list[dict], de: list[dict], ordinals: Mapping[str, str]) -> str | None:
+    """The ordinal of a numeral: a word Wiktionary tags as ordinal that the numeral's
+    entries list as derived, or whose etymology is "From <numeral> + -te"."""
+    derived = [d.get("word", "") for e in de + en for d in e.get("derived", [])]
+    linked = [w for w in derived if w in ordinals]
+    by_etymology = sorted(w for w, ety in ordinals.items() if re.match(rf"From {re.escape(numeral)} \+ -s?te\b", ety))
+    candidates = sorted(set(linked + by_etymology), key=lambda w: (len(w), w))
+    return candidates[0] if candidates else None
+
+
+def _gloss_words(senses: list[dict]) -> set[str]:
+    """Every word of the English glosses, with plural, -ed and -ing endings folded."""
+    words = set()
+    for sense in senses:
+        for word in GLOSS_WORD.findall(" ".join(sense.get("glosses", [])).lower()):
+            words.add(word)
+            for ending in ("s", "es", "d", "ed", "ing"):
+                if word.endswith(ending) and len(word) > len(ending) + 2:
+                    words.add(word[: -len(ending)])
+    return words
+
+
+def etymology_cognates(entries: Iterable[dict]) -> list[str]:
+    """Modern English words an etymology names as cognates, in order."""
+    found: list[str] = []
+    for entry in entries:
+        text = entry.get("etymology_text", "") or ""
+        for match in COGNATE.finditer(text):
+            words, end = [match.group(1)], match.end()
+            while more := COGNATE_MORE.match(text, end):
+                words.append(more.group(1))
+                end = more.end()
+            found += [w for w in words if w not in found]
+    return found
 
 
 # -- the card -------------------------------------------------------------------------------
@@ -323,7 +504,17 @@ def german_entries_for(card: Card, de_all: list[dict]) -> list[dict]:
     return [e for e in de_all if e.get("pos") in wanted and e.get("pos_title") not in INFLECTED_TITLES]
 
 
-def build_card(lemma_id: str, en: list[dict], de_all: list[dict], separable: str | None) -> Card:
+def build_card(
+    lemma_id: str,
+    en: list[dict],
+    de_all: list[dict],
+    separable: str | None,
+    *,
+    contractions: Iterable[str] = (),
+    ordinals: Mapping[str, str] | None = None,
+) -> Card:
+    """One card. `en` holds the lemma's English-edition entries (those of ids merged
+    into it follow), `de_all` every German-edition entry of the word."""
     word, pos, _ = lemma_id.split("#")
     card = Card(id=lemma_id, lemma=word, pos=pos)
     de = german_entries_for(card, de_all)
@@ -361,10 +552,12 @@ def build_card(lemma_id: str, en: list[dict], de_all: list[dict], separable: str
         else:
             card.issues.append(f"syllables: {len(card.syllables)} in hyphenation, {count} in IPA")
 
-    for entry in en:
-        if match := COGNATE.search(entry.get("etymology_text", "") or ""):
-            card.cognate_en, card.sources["cognate_en"] = match.group(1), "kaikki-en etymology"
-            break
+    # D49: a cognate is a hint only when it is one of the word's own English glosses
+    # (Haus -> house); most others mislead (schon -> pretty, sehr -> sorely).
+    card.cognates_raw = etymology_cognates(en)
+    glossed = _gloss_words(senses)
+    if hint := next((w for w in card.cognates_raw if w.lower() in glossed), None):
+        card.cognate_en, card.sources["cognate_en"] = hint, "kaikki-en etymology, in its English glosses"
 
     if pos == "noun":
         noun(card, en, de)
@@ -375,9 +568,15 @@ def build_card(lemma_id: str, en: list[dict], de_all: list[dict], separable: str
     elif pos == "adv":
         adverb(card, en)
     elif pos in ("prep", "postp"):
-        preposition(card, de)
+        preposition(card, en, de, list(contractions))
     elif pos == "conj":
-        conjunction(card, de)
+        conjunction(card, en, de)
+    elif pos == "num" and (found := ordinal(word, en, de, ordinals or {})):
+        card.key_forms["ordinal"] = found
+        card.sources["ordinal"] = "kaikki ordinal entries (derived terms, etymology)"
+    if pos in ("article", "det", "pron") and (table := case_table(de) or case_table(en)):
+        card.tables["cases"] = table
+        card.sources["tables"] = "kaikki-de" if case_table(de) else "kaikki-en"
     if "comparative" not in card.key_forms:
         # Comparison filed under another POS: viel (determiner) -> mehr -> am meisten.
         comparative, superlative = _forms(en, "comparative"), _forms(en, "superlative")
@@ -394,3 +593,16 @@ def build_card(lemma_id: str, en: list[dict], de_all: list[dict], separable: str
         if particle_use:
             card.sources["context_dependent"] = "kaikki-de pos_title"
     return card
+
+
+def apply_closed_classes(card: Card, closed) -> None:
+    """overrides/closed_classes.toml, hand-checked against Wiktionary, wins over the
+    extracted case or type (provenance `manual`)."""
+    if card.id in closed.prepositions:
+        set_cases(card, closed.prepositions[card.id], "manual (closed_classes.toml)")
+    if card.id in closed.contractions:
+        card.key_forms["contractions"] = list(closed.contractions[card.id])
+        card.sources["contractions"] = "manual (closed_classes.toml)"
+    if card.id in closed.conjunctions:
+        card.key_forms["conjunction"] = closed.conjunctions[card.id]
+        card.sources["conjunction"] = "manual (closed_classes.toml)"

@@ -18,9 +18,13 @@
    UD tokens that head a separated particle, and each particle token by its share
    of STTS PTKVZ uses (D25).
 4. Blend: weighted geometric mean of per-million frequencies, plus epsilon.
-5. Filter proper nouns, non-words, words without a German Wiktionary entry,
+5. Merges from overrides/words.toml move an id's counts onto the card it joins.
+6. Filter proper nouns, non-words, words without a German Wiktionary entry,
    digits and excluded ids, then rank. token_share is a lemma's share of all
    blended mass, including what was filtered or matched no lemma.
+
+Every sum runs in a fixed order (or with math.fsum), so the same inputs give the
+same floats whatever order Python iterates its sets in.
 """
 
 import math
@@ -172,6 +176,7 @@ def rank(
     spoken_weight: float,
     epsilon: float,
     exclude: Mapping[str, str],
+    merge: Mapping[str, str] | None = None,
 ) -> Result:
     # -- 1. per-million counts per cased form -------------------------------------------
     spoken_lower: dict[str, int] = defaultdict(int)
@@ -205,7 +210,7 @@ def rank(
     # -- 2. lemmas ----------------------------------------------------------------------
     etymologies = Counter((lemma.word, lemma.pos) for lemma in lexicon.lemmas.values())
     homograph_mass: dict[str, float] = defaultdict(float)
-    for form in form_spoken.keys() | form_written.keys():
+    for form in sorted(form_spoken.keys() | form_written.keys()):
         by_word_pos: dict[tuple[str, str], list[str]] = defaultdict(list)
         for id_ in lexicon.candidates[form]:
             by_word_pos[(lexicon.lemmas[id_].word, lexicon.lemmas[id_].pos)].append(id_)
@@ -248,16 +253,25 @@ def rank(
         lemma_spoken[id_] *= factor
         lemma_written[id_] *= factor
 
-    # -- 4. blend -----------------------------------------------------------------------
+    # -- 4. merges -----------------------------------------------------------------------
+    dropped: dict[str, str] = {}
+    for absorbed, target in sorted((merge or {}).items()):
+        lemma_spoken[target] += lemma_spoken.pop(absorbed, 0.0)
+        lemma_written[target] += lemma_written.pop(absorbed, 0.0)
+        lemma_flags[target] |= lemma_flags.pop(absorbed, set()) | {"merged"}
+        dropped[absorbed] = f"merged into {target}"
+
+    # -- 5. blend -----------------------------------------------------------------------
     def blend(s: float, w: float) -> float:
         return math.exp(spoken_weight * math.log(s + epsilon) + (1 - spoken_weight) * math.log(w + epsilon)) - epsilon
 
-    blended = {id_: blend(lemma_spoken[id_], lemma_written[id_]) for id_ in lemma_spoken.keys() | lemma_written.keys()}
-    unmapped_mass = sum(blend(s, w) for s, w in unmapped.values())
-    mass = sum(blended.values()) + unmapped_mass
+    blended = {
+        id_: blend(lemma_spoken[id_], lemma_written[id_]) for id_ in sorted(lemma_spoken.keys() | lemma_written.keys())
+    }
+    unmapped_mass = math.fsum(blend(s, w) for s, w in unmapped.values())
+    mass = math.fsum(blended.values()) + unmapped_mass
 
-    # -- 5. filter and rank ---------------------------------------------------------------
-    dropped: dict[str, str] = {}
+    # -- 6. filter and rank ---------------------------------------------------------------
     kept_ids: list[str] = []
     for id_ in blended:
         lemma = lexicon.lemmas[id_]

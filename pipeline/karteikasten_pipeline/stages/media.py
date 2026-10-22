@@ -102,6 +102,8 @@ def pick_audio(
 # -- processing -----------------------------------------------------------------------------
 # Deterministic: same input and tool versions give the same bytes (bit-exact flags,
 # metadata stripped), and files are named by the SHA-1 of what they contain.
+# `AudioStore` remembers what each source file became, so ffmpeg runs once per
+# source and ffmpeg version.
 
 AUDIO_FILTER = ",".join(
     [
@@ -145,3 +147,49 @@ def process_audio(source: Path, directory: Path) -> tuple[str, int]:
         )
         return _store(out.read_bytes(), directory, ".mp3"), round(float(probe.stdout.strip()) * 1000)
 
+
+
+def ffmpeg_version() -> str:
+    import subprocess
+
+    out = subprocess.run(["ffmpeg", "-version"], check=True, capture_output=True, text=True).stdout
+    return out.splitlines()[0]
+
+
+class AudioStore:
+    """Processed audio in `directory`, with an index from (source hash, filter,
+    ffmpeg version) to the output file and its duration."""
+
+    def __init__(self, directory: Path, *, fresh: bool = False):
+        import json
+
+        self.directory = directory
+        self.index_path = directory / "audio-index.json"
+        self.version = ffmpeg_version()
+        self.index: dict[str, list] = {}
+        if self.index_path.exists() and not fresh:
+            self.index = json.loads(self.index_path.read_text(encoding="utf-8"))
+
+    def key(self, source_sha256: str) -> str:
+        import hashlib
+
+        return hashlib.sha256(f"{source_sha256}\n{AUDIO_FILTER}\n{self.version}".encode()).hexdigest()
+
+    def get(self, source: Path, source_sha256: str) -> tuple[str, int]:
+        """(file name under directory/audio, duration in ms) for a source file."""
+        key = self.key(source_sha256)
+        known = self.index.get(key)
+        if known and (self.directory / "audio" / known[0]).exists():
+            return known[0], known[1]
+        name, duration = process_audio(source, self.directory / "audio")
+        self.index[key] = [name, duration]
+        return name, duration
+
+    def save(self) -> None:
+        import json
+
+        self.directory.mkdir(parents=True, exist_ok=True)
+        text = json.dumps(self.index, sort_keys=True, indent=1) + "\n"
+        tmp = self.index_path.with_name(self.index_path.name + ".tmp")
+        tmp.write_text(text, encoding="utf-8")
+        tmp.replace(self.index_path)

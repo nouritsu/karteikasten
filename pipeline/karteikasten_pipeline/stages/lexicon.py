@@ -2,8 +2,8 @@
 
 The English edition supplies lemmas, POS, etymology numbers and forms; the
 German edition confirms that a word exists in German Wiktionary. Full entries
-are only re-read later for the words that make the deck (`entries_for`), so the
-lexicon itself stays small.
+are only read again for the words that make the deck, through the byte-offset
+indexes `load` builds in the same pass, so the lexicon itself stays small.
 
 Rules learned from the data (docs/sources/kaikki.md):
 - entries sharing (word, pos, etymology) are one lemma (Hand also has a separate
@@ -68,6 +68,8 @@ class Lexicon:
     candidates: dict[str, set[str]]  # surface token -> ids of lemmas it can be a form of
     separable: dict[str, str]  # particle verb id -> its particle ("anfangen#verb#1" -> "an")
     german_words: set[str] = field(default_factory=set)  # words with a German-edition entry
+    contractions: dict[str, list[str]] = field(default_factory=dict)  # preposition id -> im, ins (not colloquial)
+    ordinals: dict[str, str] = field(default_factory=dict)  # ordinal word -> its etymology text
 
     def in_german_wiktionary(self, word: str) -> bool:
         return word in self.german_words
@@ -134,9 +136,14 @@ def build(en_entries: Iterable[dict], german_words: Iterable[str]) -> Lexicon:
     separable: dict[str, str] = {}
     # (form word, pos, target word) for form-of and alt-of entries, resolved at the end
     links: list[tuple[str, str, str]] = []
-    contractions: list[tuple[str, str]] = []
+    contractions: list[tuple[str, str]] = []  # (contraction id, preposition word)
+    colloquial: set[str] = set()  # contraction ids Wiktionary tags colloquial (mim, fürn): counted, not listed
+
+    ordinals: dict[str, str] = {}
 
     for entry in en_entries:
+        if any("ordinal" in sense.get("tags", []) for sense in entry.get("senses", [])):
+            ordinals.setdefault(entry["word"], entry.get("etymology_text") or "")
         kinds = _sense_kinds(entry)
         if kinds <= {"misspelling"}:
             continue
@@ -162,7 +169,9 @@ def build(en_entries: Iterable[dict], german_words: Iterable[str]) -> Lexicon:
             # The first sense is the common one: "am" is an + dem far more often than auf + dem.
             for sense in entry.get("senses", [])[:1]:
                 if match := CONTRACTION.match(" ".join(sense.get("glosses", []))):
-                    contractions.append((lemma.word, match.group(1)))
+                    contractions.append((lemma.id, match.group(1)))
+                    if set(sense.get("tags", [])) & {"colloquial", "informal", "dialectal"}:
+                        colloquial.add(lemma.id)
 
     by_word_pos: dict[tuple[str, str], list[str]] = defaultdict(list)
     by_word: dict[str, list[str]] = defaultdict(list)
@@ -188,31 +197,45 @@ def build(en_entries: Iterable[dict], german_words: Iterable[str]) -> Lexicon:
     # A contraction counts toward its preposition wherever it is a candidate ("ins" is
     # also listed in the table of "im"); other readings stay ("am" before a superlative).
     preposition_of = {
-        lemma_id(word, "contraction", 1): lemma_id(preposition, "prep", 1)
-        for word, preposition in contractions
-        if lemma_id(preposition, "prep", 1) in lemmas
+        contraction: lemma_id(preposition, "prep", 1)
+        for contraction, preposition in contractions
+        if lemma_id(preposition, "prep", 1) in lemmas and lemmas[contraction].word != preposition
     }
     for form, ids in candidates.items():
         if ids & preposition_of.keys():
             candidates[form] = {preposition_of.get(id_, id_) for id_ in ids}
+
+    by_preposition: dict[str, set[str]] = defaultdict(set)
+    for contraction, preposition in preposition_of.items():
+        if contraction not in colloquial:
+            by_preposition[preposition].add(lemmas[contraction].word)
 
     return Lexicon(
         lemmas=lemmas,
         candidates=dict(candidates),
         separable=separable,
         german_words=set(german_words),
+        contractions={id_: sorted(words) for id_, words in sorted(by_preposition.items())},
+        ordinals=ordinals,
     )
 
 
-def load(work: Path) -> Lexicon:
-    german_words = (entry["word"] for entry in kaikki.read(work / "kaikki" / "de.jsonl"))
-    return build(kaikki.read(work / "kaikki" / "en.jsonl"), german_words)
+def load(work: Path) -> tuple[Lexicon, kaikki.Index, kaikki.Index]:
+    """The lexicon, plus indexes into both extracts: English entries by lemma id,
+    German entries by word. One pass over each file."""
+    en_path, de_path = work / "kaikki" / "en.jsonl", work / "kaikki" / "de.jsonl"
+    en_offsets: dict[str, list[int]] = defaultdict(list)
+    de_offsets: dict[str, list[int]] = defaultdict(list)
 
+    def en_entries() -> Iterable[dict]:
+        for offset, entry in kaikki.read_with_offsets(en_path):
+            en_offsets[entry_id(entry)].append(offset)
+            yield entry
 
-def entries_for(work: Path, ids: set[str]) -> dict[str, list[dict]]:
-    """Full English-edition entries of the given lemmas (re-read from the extract)."""
-    found: dict[str, list[dict]] = defaultdict(list)
-    for entry in kaikki.read(work / "kaikki" / "en.jsonl"):
-        if entry_id(entry) in ids:
-            found[entry_id(entry)].append(entry)
-    return dict(found)
+    def german_words() -> Iterable[str]:
+        for offset, entry in kaikki.read_with_offsets(de_path):
+            de_offsets[entry["word"]].append(offset)
+            yield entry["word"]
+
+    lexicon = build(en_entries(), german_words())
+    return lexicon, kaikki.Index(en_path, dict(en_offsets)), kaikki.Index(de_path, dict(de_offsets))
