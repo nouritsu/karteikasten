@@ -31,6 +31,8 @@ export interface Sentence {
   native: boolean
   en_author: string | null
   en_license: string | null
+  deck_token_ids?: string[] // the deck words in the sentence, for choosing one (D12)
+  out_of_deck?: number // its words outside the deck
 }
 
 export type Gender = 'm' | 'f' | 'n'
