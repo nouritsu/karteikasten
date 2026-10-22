@@ -41,7 +41,14 @@ def parser() -> argparse.ArgumentParser:
         "--offline", action="store_true", help="fail instead of fetching Commons data the snapshot lacks"
     )
 
-    commands.add_parser("report", help="copy the latest deck's coverage report to reports/coverage.md")
+    report = commands.add_parser(
+        "report", help="copy the latest deck's coverage report to reports/coverage.md, or write a diff report"
+    )
+    report.add_argument(
+        "--diff", nargs="*", metavar="VERSION",
+        help="write reports/diff.md comparing two decks: OLD NEW, OLD (against the latest), or none (the latest "
+             "against the deck built before it)",
+    )
 
     return cli
 
@@ -95,6 +102,25 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     version = json.loads(latest.read_text(encoding="utf-8"))["version"]
     paths.reports.mkdir(parents=True, exist_ok=True)
+    if args.diff is not None:
+        from karteikasten_pipeline import diff
+
+        decks = paths.dist / "deck"
+        if len(args.diff) > 2:
+            cli.error("report --diff takes at most two versions")
+        new = args.diff[1] if len(args.diff) == 2 else version
+        old = args.diff[0] if args.diff else diff.previous(decks, new)
+        if old is None:
+            print("report: no earlier deck to compare with", file=sys.stderr)
+            return 1
+        for name in (old, new):
+            if not (decks / name / "manifest.json").exists():
+                print(f"report: no deck {name} in {decks}", file=sys.stderr)
+                return 1
+        dest = paths.reports / "diff.md"
+        dest.write_text(diff.render(diff.Deck.load(decks / old), diff.Deck.load(decks / new)), encoding="utf-8")
+        print(dest)
+        return 0
     shutil.copyfile(paths.dist / "deck" / version / "coverage.md", paths.reports / "coverage.md")
     print(paths.reports / "coverage.md")
     return 0
