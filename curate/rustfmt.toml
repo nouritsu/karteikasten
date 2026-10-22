@@ -1,0 +1,2 @@
+# Same line length as the pipeline (ruff, pyproject.toml).
+max_width = 120
