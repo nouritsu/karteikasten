@@ -57,7 +57,7 @@ All 22 decisions are final; D19 was not answered, so it takes the recommended de
 
 ### Amendments
 
-D23–D26 were accepted after Phase 1 on 2026-10-06 (evidence in `reports/phase1-coverage.md`); D27–D39 come from your Phase 2 review on 2026-10-07; D40–D45 from your request for an APK the same day; D46 from your request on 2026-10-15; D47 records your Nix choices, the plain flake and alejandra from Phase 0 on 2026-10-06 and the devenv shell from 2026-10-19; D48–D50 are your choices in Phase 3 on 2026-10-22, and D51 your choice at the start of Phase 4 the same day. The sections below are amended where they apply and marked with the decision's id.
+D23–D26 were accepted after Phase 1 on 2026-10-06 (evidence in `reports/phase1-coverage.md`); D27–D39 come from your Phase 2 review on 2026-10-07; D40–D45 from your request for an APK the same day; D46 from your request on 2026-10-15; D47 records your Nix choices, the plain flake and alejandra from Phase 0 on 2026-10-06 and the devenv shell from 2026-10-19; D48–D50 are your choices in Phase 3 on 2026-10-22, D51 your choice at the start of Phase 4 the same day, D52 your choice at the start of Phase 5, and D53 your choice after its first phone test. The sections below are amended where they apply and marked with the decision's id.
 
 | ID | Topic | Decision |
 | --- | --- | --- |
@@ -90,6 +90,8 @@ D23–D26 were accepted after Phase 1 on 2026-10-06 (evidence in `reports/phase1
 | D49 | Cognate filter | A cognate hint ships only when the English word the etymology names is among the word's own English glosses (plural, -ed and -ing endings folded): Haus → house stays, schon → pretty goes. `words.toml` `[no_cognate]` drops any wrong hint that remains. This is stage 40's exceptions list. |
 | D50 | Modal verbs | Verbs get a fourth class, `modal`, as language teaching does: the six verbs in the English edition's "German modal verbs" category (können, müssen, dürfen, sollen, mögen, wollen); the card says "Modalverb". Other verbs Wiktionary classes as preterite-present (wissen: weiß, wusste, gewusst) are `mixed`, where teaching materials list wissen. |
 | D51 | Abbreviations | Abbreviations stay in the deck (they are everyday vocabulary). A word whose only Wiktionary senses are abbreviations takes them as its English glosses ("abbreviation of Doktor") and is flagged `abbreviation`; abbreviated nouns need no gender, plural or genitive, so the noun checks and coverage fields skip them. |
+| D52 | Export target | Export writes `Documents/Karteikasten/karteikasten-YYYY-MM-DD.json` on the phone through `@capacitor/filesystem`, without asking each time; a Syncthing folder can sync it later (D22). Android 11 and newer need no permission for files the app creates. Import picks the file with the system file picker. Replaces "Export downloads". |
+| D53 | New words | A new word runs like a review: Bereit shows only the word, the score runs, and Weiß ich / Weiß ich nicht give its first FSRS rating. A known word is done in one card (a high score is Easy); an unknown one shows its meaning and comes back within minutes as a learning card. No Intro, no Kenne ich schon on the card, no separate check; Kenne ich schon stays a Wörter action. Words left from an Intro before D53 get their scored check first. Replaces D16's Intro; its 15 new words a day stay. |
 
 ## Implementation defaults
 
@@ -394,17 +396,17 @@ Beantwortet after Weiß ich (score frozen, hints free, undo offered; the meaning
 
 ## Card flow and score
 
-Every card runs Bereit → Enthüllen → Läuft → Beantwortet → Weiter; new words replace Läuft and Beantwortet with an unscored Intro.
+Every card runs Bereit → Enthüllen → Läuft → Beantwortet → Weiter, new words included (D53).
 
 &#91;embedded content: card states · 5 states, 2 paths\]
 
-Weiter always returns to Bereit; the clock runs only in Läuft, and new words take the unscored Intro path.
+Weiter always returns to Bereit, and the clock runs only in Läuft. (The diagram's Intro path is gone, D53.)
 
 1. Bereit: the card shows Bereit! as large plain text and no greeting (D28, D34). Every status-bar field shows dashes at its normal width; hint and answer buttons are disabled. On the first open of a day, a word of the day (an already-known word with its best sentence) sits above the button.
 2. Enthüllen: status fields fill in. The word with its article appears by letter shuffle: each letter cycles random letters of the same case (including ÄÖÜß) and locks left to right with about 50 ms stagger, 700 ms at most. IPA and syllables fade in after. With `prefers-reduced-motion`, the word appears at once.
 3. Läuft: the clock starts when the last letter locks. The score decays, hints cost points, and the buttons are Weiß ich nicht and Weiß ich. The score shows in the Punkte block's title, shuffling on every change, and the number and border fade to its band's colour (D29). Hint buttons show no costs; a press that costs points flashes its deduction on the button, and Satz types its sentence in below the word (D32).
 4. Beantwortet: the meaning (in the UI language, D35), key forms and the chosen sentence show; hints are free; audio plays once if that setting is on. After Weiß ich, the score bar offers "war doch falsch" (undo) and Weiter; undo stays available until Weiter. After Weiß ich nicht, only Weiter.
-5. Intro (new words): after Enthüllen everything is visible and unscored, with Kenne ich schon and Weiter. Weiter schedules a first scored check in the same session after at least 3 other cards. Kenne ich schon records a first FSRS rating of Easy and skips the check.
+5. New words (D53): the same flow; the first answer is the word's first FSRS rating. Weiß ich nicht makes it a learning card that comes back within minutes; Weiß ich with a high score (Easy) schedules it days ahead.
 
 The clock pauses while the page is hidden (`visibilitychange`) and resumes when it is visible again.
 
@@ -434,12 +436,13 @@ Reviews are append-only events in IndexedDB; FSRS card state is derived from the
 Scheduling:
 
 - ts-fsrs (FSRS-6), desired retention 0.9, fuzz on, short-term learning steps per ts-fsrs defaults. Check current API names against its docs.
-- Queue order: learning and relearning cards due now, then due reviews (oldest first), then new words by rank up to the daily limit (15). Intro checks re-enter after 3 or more other cards.
+- Queue order: words left from an Intro before D53 and never rated, learning and relearning cards due now, then reviews due before the next rollover (oldest first), then new words by rank up to the daily limit (15; a word counts on the day of its first answer). With nothing else left, a learning card due within the learn-ahead window (20 minutes, a setting); otherwise Feierabend, which picks up a card as soon as it comes due.
 - The day rolls over at 04:00 local time.
 
 Storage and offline:
 
-- IndexedDB stores: `events`, `cards` (derived cache), `settings`, `meta`. Call `navigator.storage.persist()` on first run.
+- IndexedDB stores: `events`, `cards` (derived cache, rewritten from a full replay at every start), `settings`, `meta`. Call `navigator.storage.persist()` on first run.
+- An answered review is kept in `meta` until Weiter writes its event (undo changes it there); if the app closes first, the next start writes it as it stood, so no answer is lost.
 - Deck loading: `/deck/latest.json` → `/deck/<v>/manifest.json` + `words.json`, all inside the APK (D41).
 - New deck version: arrives with an APK update. Progress follows stable ids; orphaned ids keep their history and are listed, never deleted.
 - IndexedDB lives in the app's data: an update with the same id and key keeps it (D43, D44); uninstalling or clearing the app's storage deletes it, so export is the only backup.
@@ -464,7 +467,7 @@ Event shape:
 
 Export and import:
 
-- Export downloads `karteikasten-YYYY-MM-DD.json`: `{format: "karteikasten-backup", version: 1, exported_at, device_id, settings, events}`.
+- Export writes `Documents/Karteikasten/karteikasten-YYYY-MM-DD.json` (D52): `{format: "karteikasten-backup", version: 1, exported_at, device_id, settings, events}`; `settings` also carries the language and theme.
 - Import merges events by id (idempotent union); restoring settings is optional. Optionen shows "Letzter Export vor N Tagen" and nudges after 7 days.
 - Syncthing later: export files land in a synced folder, and merging stays a union of events.
 
@@ -569,7 +572,7 @@ Phase 0 unlocks both spikes, and Phase 3 starts only after the coverage report a
   - Done when the top 500 words have no blocking issues (D46). Passed on 2026-10-22.
 - Phase 5 · Core study loop
   - Engine: score state machine, grade bands, queue, ts-fsrs adapter, 04:00 rollover. Storage; deck loader (D41).
-  - Full card flow including Intro, Kenne ich schon, undo, dynamic sentence choice, EN/DE toggle, pause while hidden, haptics.
+  - Full card flow, new words included (D53), undo, dynamic sentence choice, the language button (D35), pause while hidden, haptics; export and import (D52).
   - Done when Vitest covers decay, penalties, bands, undo, pause, queue and replay; export → wipe → import restores identical state; a week of real daily use loses nothing.
 - Phase 6 · Screens and polish
   - Statistik, Wörter, Suche, Optionen, Thema (Latte and Mocha), Info, word of the day, Feierabend!, reduced motion, font size.
