@@ -31,6 +31,11 @@ def _all(_: Word) -> bool:
     return True
 
 
+def _full_noun(w: Word) -> bool:
+    """Nouns that need gender, plural and genitive: not abbreviations (D51)."""
+    return w["pos"] == "noun" and "abbreviation" not in w["flags"]
+
+
 def _noun_plural(w: Word) -> bool:
     return bool(w["key_forms"].get("plural")) or bool({"plural_only", "singular_only"} & set(w["flags"]))
 
@@ -45,9 +50,9 @@ FIELDS: tuple[Field, ...] = (
     Field("audio", "Audio", _all, lambda w: w["audio"] is not None, 1.0),
     Field("sentence", "At least 1 sentence", _all, lambda w: len(w["sentences"]) >= 1, 1.0),
     Field("gloss_de", "German definition", _all, lambda w: bool(w["gloss_de"]), 0.95),
-    Field("noun_gender", "Noun gender or plural only", _pos("noun"), lambda w: bool(w["article"]), 1.0),
-    Field("noun_plural", "Noun plural (or flag)", _pos("noun"), _noun_plural, 1.0),
-    Field("noun_genitive", "Noun genitive (or plural only)", _pos("noun"), _noun_genitive, 1.0),
+    Field("noun_gender", "Noun gender or plural only", _full_noun, lambda w: bool(w["article"]), 1.0),
+    Field("noun_plural", "Noun plural (or flag)", _full_noun, _noun_plural, 1.0),
+    Field("noun_genitive", "Noun genitive (or plural only)", _full_noun, _noun_genitive, 1.0),
     Field("verb_core", "Verb er-form, Präteritum, Partizip II, auxiliary", _pos("verb"),
           lambda w: all(w["key_forms"].get(k) for k in VERB_CORE), 1.0),
     Field("verb_strength", "Verb class (strong, weak, mixed, modal)", _pos("verb"),

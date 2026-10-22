@@ -182,3 +182,19 @@ def test_plural_from_the_table_when_the_head_has_none():
         {"form": "Herzen", "tags": ["dative", "definite", "plural"]},
     ]}]
     assert enrich.build_card("Herz#noun#1", en, [], None).key_forms["plural"] == "Herzen"
+
+
+def test_abbreviations_take_their_abbreviation_senses_as_glosses():
+    dr = [{"senses": [{"glosses": ["abbreviation of Doktor"], "tags": ["abbreviation", "alt-of", "masculine"],
+                       "alt_of": [{"word": "Doktor"}]}], "forms": []}]
+    card = enrich.build_card("Dr.#noun#1", dr, [], None)
+    assert [g.text for g in card.gloss_en] == ["abbreviation of Doktor"]
+    assert "abbreviation" in card.flags
+    assert card.gender is None  # gender comes from current senses only; D51 waives it
+
+
+def test_an_alternative_form_alone_is_no_abbreviation():
+    alt = [{"senses": [{"glosses": ["alternative form of lange"], "tags": ["alt-of", "alternative"],
+                        "alt_of": [{"word": "lange"}]}], "forms": []}]
+    card = enrich.build_card("lang#adv#1", alt, [], None)
+    assert card.gloss_en == [] and "abbreviation" not in card.flags

@@ -6,7 +6,9 @@ up in the coverage report. Every field records which edition it came from.
 - English edition: POS, gender, flags (weak noun, plural only, reflexive,
   strong/weak/mixed or modal verb), key forms and English glosses,
   cognate from the etymology (kept only when the English word is among the
-  word's own English glosses, D49), ordinals of numerals.
+  word's own English glosses, D49), ordinals of numerals. A word whose only
+  senses are abbreviations takes them as glosses ("abbreviation of Doktor",
+  D51).
 - German edition: German definitions, IPA (Germany standard), hyphenation,
   noun declension tables with articles, case tables of articles, determiners
   and pronouns.
@@ -62,6 +64,7 @@ CONJUNCTION_CATEGORIES = {
     "Subjunktion (Deutsch)": "subordinating",
 }
 TABLE_COLUMNS = (("m", {"masculine"}), ("f", {"feminine"}), ("n", {"neuter"}))
+ABBREVIATION_TAGS = frozenset({"abbreviation", "initialism", "acronym"})
 NOT_TABLE_FORM = frozenset({"alternative", "obsolete", "archaic", "abbreviation", "variant", "dated", "colloquial",
                             "error-unrecognized-form", "table-tags", "inflection-template", "personal"})
 FOOTNOTE = re.compile(r"\^\(\[[^\]]*\]\)|\[\d+[a-z]?\]")
@@ -501,6 +504,17 @@ def etymology_cognates(entries: Iterable[dict]) -> list[str]:
 # -- the card -------------------------------------------------------------------------------
 
 
+def abbreviation_glosses(en: list[dict]) -> list[Gloss]:
+    """Up to 3 glosses of the abbreviation senses, which `_senses` leaves out as alt-of."""
+    glosses: list[Gloss] = []
+    for sense in (s for e in en for s in e.get("senses", [])):
+        text = gloss_text(sense)
+        if ABBREVIATION_TAGS & set(sense.get("tags", [])) and text and len(glosses) < 3:
+            if all(g.text != text for g in glosses):
+                glosses.append(Gloss(text))
+    return glosses
+
+
 def german_entries_for(card: Card, de_all: list[dict]) -> list[dict]:
     wanted = DE_POS.get(card.pos, {card.pos})
     return [e for e in de_all if e.get("pos") in wanted and e.get("pos_title") not in INFLECTED_TITLES]
@@ -528,6 +542,11 @@ def build_card(
             card.gloss_en.append(Gloss(text, sorted(set(sense.get("tags", [])) & REGISTER_TAGS)))
     if card.gloss_en:
         card.sources["gloss_en"] = "kaikki-en"
+    elif abbreviations := abbreviation_glosses(en):
+        # D51: Dr., TU, S., St., b. are only "abbreviation of ..." in Wiktionary.
+        card.gloss_en = abbreviations
+        card.flags.append("abbreviation")
+        card.sources["gloss_en"] = "kaikki-en abbreviation senses"
     for entry in de:
         for sense in _current(entry.get("senses", [])):
             text = gloss_text(sense)

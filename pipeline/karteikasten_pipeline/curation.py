@@ -43,9 +43,10 @@ def issues(words: Iterable[dict[str, Any]], duration_outliers: set[str]) -> list
         def add(severity: str, code: str, detail: str) -> None:
             found.append(Issue(id_, severity, code, detail))
 
-        if w["pos"] == "noun" and not w["article"]:
+        full_noun = w["pos"] == "noun" and "abbreviation" not in flags  # D51
+        if full_noun and not w["article"]:
             add("blocking", "noun-gender", "noun without gender")
-        if w["pos"] == "noun" and not (k.get("plural") or {"plural_only", "singular_only"} & flags):
+        if full_noun and not (k.get("plural") or {"plural_only", "singular_only"} & flags):
             add("blocking", "noun-plural", "noun without plural or plural/singular-only flag")
         if w["pos"] == "verb" and not (k.get("partizip2") and k.get("auxiliary")):
             add("blocking", "verb-perfect", "verb without Partizip II or auxiliary")
