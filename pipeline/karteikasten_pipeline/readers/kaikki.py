@@ -43,3 +43,31 @@ def read(path: Path) -> Iterator[dict]:
     with path.open(encoding="utf-8") as lines:
         for line in lines:
             yield json.loads(line)
+
+
+def read_with_offsets(path: Path) -> Iterator[tuple[int, dict]]:
+    """Each entry with the byte offset of its line, for an `Index`."""
+    offset = 0
+    with path.open("rb") as lines:
+        for line in lines:
+            yield offset, json.loads(line)
+            offset += len(line)
+
+
+class Index:
+    """Byte offsets of an extract's entries by key, so later stages read only the
+    entries they need instead of the whole file again."""
+
+    def __init__(self, path: Path, offsets: dict[str, list[int]]):
+        self.path = path
+        self.offsets = offsets
+
+    def get(self, keys: Iterator[str] | list[str] | set[str]) -> dict[str, list[dict]]:
+        """Entries per key, in file order; keys without entries are left out."""
+        found: dict[str, list[dict]] = {}
+        with self.path.open("rb") as file:
+            for key in sorted(set(keys)):
+                for offset in self.offsets.get(key, ()):
+                    file.seek(offset)
+                    found.setdefault(key, []).append(json.loads(file.readline()))
+        return found

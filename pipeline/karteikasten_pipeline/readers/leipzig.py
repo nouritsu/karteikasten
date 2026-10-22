@@ -3,6 +3,12 @@
 <corpus>-words.txt holds (word id, word, count) with case preserved, and
 <corpus>-inv_w.txt holds (word id, sentence id, 0-based position) for every token.
 The positions let stage 30 tell "Sie" opening a sentence from formal "Sie".
+
+The lists also hold multiword units ("Esa-Pekka Salonen", "wie viel") at the
+position of their first word. Their counts stay (multiword lemmas need them),
+but which token comes before which is read from single words only: with two
+entries at one position "the previous token" is ambiguous, and the counts
+varied from run to run. A unit opens a sentence when its first word does.
 """
 
 import tarfile
@@ -39,21 +45,27 @@ def counts(con: duckdb.DuckDBPyConnection, corpus: Path) -> duckdb.DuckDBPyRelat
     openers = ", ".join("'" + mark.replace("'", "''") + "'" for mark in OPENERS)
     return con.sql(
         f"""
-        WITH words AS (SELECT * FROM {words}),
+        WITH words AS (SELECT *, contains(word, ' ') AS multiword FROM {words}),
+        positions AS (SELECT * FROM {inv}),
         tokens AS (
-            SELECT inv.word_id, inv.sentence_id, inv.pos,
-                   regexp_matches(words.word, '\\p{{L}}') AS lettered,
-                   lag(words.word) OVER (PARTITION BY inv.sentence_id ORDER BY inv.pos) AS previous
-            FROM {inv} AS inv JOIN words ON words.id = inv.word_id
+            SELECT p.sentence_id, p.pos,
+                   regexp_matches(w.word, '\\p{{L}}') AS lettered,
+                   lag(w.word) OVER (PARTITION BY p.sentence_id ORDER BY p.pos) AS previous
+            FROM positions AS p JOIN words AS w ON w.id = p.word_id
+            WHERE NOT w.multiword
         ),
         first_lettered AS (
             SELECT sentence_id, min(pos) AS pos FROM tokens WHERE lettered GROUP BY sentence_id
         ),
-        opened AS (
-            SELECT tokens.word_id, count(*) AS n
+        opening AS (
+            SELECT tokens.sentence_id, tokens.pos
             FROM tokens JOIN first_lettered USING (sentence_id)
             WHERE tokens.lettered AND (tokens.pos = first_lettered.pos OR tokens.previous IN ({openers}))
-            GROUP BY tokens.word_id
+        ),
+        opened AS (
+            SELECT p.word_id, count(*) AS n
+            FROM positions AS p JOIN opening USING (sentence_id, pos)
+            GROUP BY p.word_id
         )
         SELECT words.word, words.freq AS total, coalesce(opened.n, 0) AS initial
         FROM words LEFT JOIN opened ON opened.word_id = words.id
