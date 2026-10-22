@@ -17,10 +17,9 @@
     audio: '♪',
     forms: '▦',
     sentence: '¶',
-    picture: '▣',
     cognate: '⚯',
   }
-  const ORDER: Hint[] = ['audio', 'forms', 'sentence', 'picture', 'cognate']
+  const ORDER: Hint[] = ['audio', 'forms', 'sentence', 'cognate']
   // Buttons show no costs. A press that costs points shuffles the label into its
   // deduction and back; later presses, and presses after answering, are free.
   const FLASH_MS = 900
@@ -35,8 +34,6 @@
         return Object.keys(word.key_forms).length > 0 || Object.keys(word.tables).length > 0
       case 'sentence':
         return word.sentences.length > 0
-      case 'picture':
-        return word.image !== null
       case 'cognate':
         return word.cognate_en !== null
     }
@@ -70,7 +67,7 @@
 <style>
   .hints {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     gap: 0.45em 0.6ch;
     padding-top: 0.6em;
   }

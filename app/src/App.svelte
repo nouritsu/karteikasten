@@ -14,7 +14,7 @@
   import ScoreBar from './lib/ui/ScoreBar.svelte'
   import StatusBar from './lib/ui/StatusBar.svelte'
 
-  type Sheet = 'forms' | 'picture' | Exclude<Screen, 'theme' | 'lang'>
+  type Sheet = 'forms' | Exclude<Screen, 'theme' | 'lang'>
   const AUTOPLAY = true // "audio after answering" becomes a setting in Phase 6
   const SHEET_DELAY_MS = 400 // a charged hint shows its deduction before its sheet covers it
 
@@ -34,7 +34,7 @@
   // Ask for every media file once so the service worker keeps it for offline use.
   function warm(d: Deck) {
     for (const word of d.words) {
-      for (const item of [word.audio, word.image]) if (item) fetch(d.base + item.path).catch(() => {})
+      if (word.audio) fetch(d.base + word.audio.path).catch(() => {})
     }
   }
 
@@ -67,7 +67,7 @@
   function onHint(hint: Hint): boolean {
     const charged = session.use(hint)
     if (hint === 'audio') play()
-    if (hint === 'forms' || hint === 'picture') {
+    if (hint === 'forms') {
       const open = () => (sheet = hint)
       if (charged) setTimeout(open, SHEET_DELAY_MS)
       else open()
@@ -106,7 +106,6 @@
 
   function sheetTitle(s: Sheet): string {
     if (s === 'forms') return t.forms.title
-    if (s === 'picture') return t.picture.title
     return t.nav[s]
   }
 </script>
@@ -128,15 +127,6 @@
   <Overlay title={sheetTitle(sheet)} onClose={() => (sheet = null)}>
     {#if sheet === 'forms' && session.word}
       <FormsView word={session.word} />
-    {:else if sheet === 'picture' && session.word?.image && deck}
-      {@const image = session.word.image}
-      <figure>
-        <img src={deck.base + image.path} alt={session.word.lemma} />
-        <figcaption class="muted">
-          {image.source}{image.author ? ` · ${image.author}` : ''} · {image.license}
-          {#if !image.approved}<br />({t.picture.unapproved}){/if}
-        </figcaption>
-      </figure>
     {:else}
       <p>{t.later}</p>
     {/if}
@@ -157,15 +147,5 @@
 
   .message {
     padding: 2em 1ch;
-  }
-
-  figure {
-    margin: 0;
-    text-align: center;
-  }
-
-  img {
-    width: min(60vw, 256px);
-    height: auto;
   }
 </style>

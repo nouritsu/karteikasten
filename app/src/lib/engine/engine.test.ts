@@ -21,12 +21,12 @@ describe('score', () => {
   it('charges each hint once', () => {
     expect(score(0, ['audio'])).toBe(90)
     expect(score(0, ['audio', 'audio', 'forms'])).toBe(75)
-    expect(score(0, ['picture', 'cognate'])).toBe(20)
+    expect(score(0, ['sentence', 'cognate'])).toBe(50)
   })
 
   it('never drops below zero', () => {
-    expect(score(60_000, ['picture'])).toBe(0)
-    expect(score(0, ['audio', 'forms', 'sentence', 'picture', 'cognate'])).toBe(0)
+    expect(score(60_000, ['cognate'])).toBe(0)
+    expect(score(2000 + 1500 * 6, ['audio', 'forms', 'sentence', 'cognate'])).toBe(0)
   })
 
   it('takes its numbers from the settings', () => {

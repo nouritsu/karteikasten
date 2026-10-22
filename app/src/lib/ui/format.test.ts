@@ -7,7 +7,7 @@ function word(partial: Partial<DeckWord>): DeckWord {
   return {
     id: 'x#noun#1', rank: 1, lemma: 'x', pos: 'noun', gender: null, article: null, token_share: 0, coverage_cum: 0,
     ipa: null, syllables: null, stress_syllable: null, cognate_en: null, flags: [], key_forms: {}, tables: {},
-    gloss_en: [], gloss_de: [], audio: null, image: null, emoji: null, is_concrete: null, sentences: [],
+    gloss_en: [], gloss_de: [], audio: null, sentences: [],
     ...partial,
   }
 }

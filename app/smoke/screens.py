@@ -61,10 +61,6 @@ with sync_playwright() as p:
     page.click("text=Bereit!")  # Hand
     time.sleep(1.3)
     page.screenshot(path=OUT / "8-hand.png")
-    page.click("button:has-text('Bild')")
-    time.sleep(0.9)
-    page.screenshot(path=OUT / "9-bild.png")
-    page.click("button:has-text('Schließen')")
     page.click("button:has-text('Weiß ich'):not(:has-text('nicht'))")
     time.sleep(1.3)
     page.click("button[aria-label='English']")

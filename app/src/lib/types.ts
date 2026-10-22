@@ -19,12 +19,6 @@ export interface Audio extends Credit {
   region: string | null // a regional recording, used only when no standard one exists (D24)
 }
 
-export interface Picture extends Credit {
-  path: string
-  kind: 'openmoji' | 'arasaac'
-  approved: boolean
-}
-
 export interface Sentence {
   id: string
   de: string
@@ -60,9 +54,6 @@ export interface DeckWord {
   gloss_en: Gloss[]
   gloss_de: Gloss[]
   audio: Audio | null
-  image: Picture | null
-  emoji: string | null
-  is_concrete: boolean | null
   sentences: Sentence[]
 }
 

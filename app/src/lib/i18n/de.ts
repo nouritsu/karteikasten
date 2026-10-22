@@ -40,7 +40,6 @@ export const de = {
     audio: 'Audio',
     forms: 'Formen',
     sentence: 'Satz',
-    picture: 'Bild',
     cognate: 'Verwandt',
   },
   score: {
@@ -92,7 +91,6 @@ export const de = {
     subjunctiveII: 'Konjunktiv II',
     none: 'Keine Formen in den Daten.',
   },
-  picture: { title: 'Bild', unapproved: 'noch nicht freigegeben' },
   cognate: { title: 'Verwandt', english: 'Englisch' },
   credit: { by: 'von', source: 'Quelle' },
   later: 'Kommt in Phase 6.',

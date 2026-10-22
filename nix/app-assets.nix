@@ -22,7 +22,7 @@
   # Combining Diacritical Marks (German IPA uses ◌̯ ◌̩ and the tie in t͡s);
   # General Punctuation; Box Drawing and Block Elements; ≈ for the cognate line;
   # and the icons the app draws instead of emoji, none of which has an emoji
-  # form: ⌕ ⓘ ▣ ▤ ▥ ▦ ♪ ⚯ ⛭ (¶ is in Latin-1).
+  # form: ⌕ ⓘ ▤ ▥ ▦ ♪ ⚯ ⛭ (¶ is in Latin-1).
   unicodes = lib.concatStringsSep "," [
     "U+0000-017F"
     "U+0250-036F"
@@ -31,7 +31,7 @@
     "U+2248"
     "U+2315"
     "U+24D8"
-    "U+25A3-25A6"
+    "U+25A4-25A6"
     "U+266A"
     "U+26AF"
     "U+26ED"

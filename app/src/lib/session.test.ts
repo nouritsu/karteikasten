@@ -7,7 +7,7 @@ function deck(...ids: string[]): DeckWord[] {
   return ids.map((id, i) => ({
     id, rank: i + 1, lemma: id, pos: 'noun', gender: null, article: null, token_share: 0.01, coverage_cum: 0,
     ipa: null, syllables: null, stress_syllable: null, cognate_en: null, flags: [], key_forms: {}, tables: {},
-    gloss_en: [], gloss_de: [], audio: null, image: null, emoji: null, is_concrete: null, sentences: [],
+    gloss_en: [], gloss_de: [], audio: null, sentences: [],
   }))
 }
 
@@ -53,7 +53,7 @@ describe('session', () => {
     s.now = 0
     expect(s.score).toBe(90)
     s.respond('know', 0)
-    expect(s.use('picture')).toBe(false)
+    expect(s.use('cognate')).toBe(false)
   })
 
   it('makes "Weiß ich nicht" and the undo score 0 and Again', () => {

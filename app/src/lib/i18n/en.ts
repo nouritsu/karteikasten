@@ -40,7 +40,6 @@ export const en: Strings = {
     audio: 'Audio',
     forms: 'Forms',
     sentence: 'Sentence',
-    picture: 'Picture',
     cognate: 'Related',
   },
   score: {
@@ -92,7 +91,6 @@ export const en: Strings = {
     subjunctiveII: 'subjunctive II',
     none: 'No forms in the data.',
   },
-  picture: { title: 'Picture', unapproved: 'not approved yet' },
   cognate: { title: 'Related', english: 'English' },
   credit: { by: 'by', source: 'Source' },
   later: 'Coming in Phase 6.',
