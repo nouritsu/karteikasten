@@ -85,6 +85,15 @@
       fetch = pipelineApp "fetch" "Snapshot every source into data/raw and update sources.lock.json";
       build = pipelineApp "build" "Build the deck bundle from the data/raw snapshot (stages 20-70)";
       report = pipelineApp "report" "Write coverage and diff reports to reports/";
+      # ffplay and ffmpeg play and record; the pipeline fetches Commons files to play.
+      curate = {
+        type = "app";
+        program = lib.getExe (pkgs.writers.writeFishBin "karteikasten-curate" ''
+          fish_add_path --global --prepend ${lib.makeBinPath [pkgs.ffmpeg own.pipeline]}
+          exec ${lib.getExe own.curate} $argv
+        '');
+        meta.description = "Curation TUI: issue queue, audio and sentence pickers, recorder; writes overrides/";
+      };
       apk = {
         type = "app";
         program = lib.getExe (pkgs.callPackage ./nix/apk-app.nix {
