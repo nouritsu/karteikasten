@@ -57,7 +57,7 @@ All 22 decisions are final; D19 was not answered, so it takes the recommended de
 
 ### Amendments
 
-D23–D26 were accepted after Phase 1 on 2026-10-06 (evidence in `reports/phase1-coverage.md`); D27–D39 come from your Phase 2 review on 2026-10-07; D40–D45 from your request for an APK the same day; D46 from your request on 2026-10-15; D47 records your Nix choices, the plain flake and alejandra from Phase 0 on 2026-10-06 and the devenv shell from 2026-10-19. The sections below are amended where they apply and marked with the decision's id.
+D23–D26 were accepted after Phase 1 on 2026-10-06 (evidence in `reports/phase1-coverage.md`); D27–D39 come from your Phase 2 review on 2026-10-07; D40–D45 from your request for an APK the same day; D46 from your request on 2026-10-15; D47 records your Nix choices, the plain flake and alejandra from Phase 0 on 2026-10-06 and the devenv shell from 2026-10-19; D48 and D49 are your choices in Phase 3 on 2026-10-22, and D50 is proposed with the Phase 3 report. The sections below are amended where they apply and marked with the decision's id.
 
 | ID | Topic | Decision |
 | --- | --- | --- |
@@ -86,6 +86,9 @@ D23–D26 were accepted after Phase 1 on 2026-10-06 (evidence in `reports/phase1
 | D45 | APK versions | versionName is the app version plus the deck version (`0.1.0+2026.10.06-bdc9ce1`); versionCode is the commit count, so a new deck without a new commit needs `--version-code`. |
 | D46 | No pictures | The Bild hint and its sheet go: a picture gives the answer away, and approving images noun by noun was manual work for little gain. With them go ARASAAC, OpenMoji with the CLDR annotations, the Köper norms, `is_concrete`, `emoji`, `overrides/images.toml` and the concreteness labels. The four hint buttons that remain sit two to a row. Replaces D11; amends D31; the profiles of D26 stay, without `is_concrete`. |
 | D47 | Nix layout | A plain flake replaces flake-parts with the dendritic pattern and import-tree: each package is a `callPackage` file under `nix/`, and `flake.nix` wires the apps, dev shell, checks and formatter itself. alejandra, run by treefmt as `nix fmt`, replaces nixfmt. The dev shell is devenv in flake mode with the house style from `nouritsu/conf-nixos`, so direnv and `nix flake check` need `--no-pure-eval`. The flake targets x86_64-linux only, where androidenv's SDK tools run. |
+| D48 | Stage storage | Stage 20 keeps the German entries of both Kaikki editions as JSONL extracts in `data/work/kaikki/`, with byte-offset indexes, and builds the lexicon in Python; DuckDB counts the Leipzig corpora. Stage outputs are cached in `data/work/cache/` under a hash of their inputs (lock hashes, overrides, settings) and of the code that computes them. `deck.sqlite` stays the canonical deck. Replaces stage 20's `lex_*` tables and the parquet stage outputs. |
+| D49 | Cognate filter | A cognate hint ships only when the English word the etymology names is among the word's own English glosses (plural, -ed and -ing endings folded): Haus → house stays, schon → pretty goes. `words.toml` `[no_cognate]` drops any wrong hint that remains. This is stage 40's exceptions list. |
+| D50 | Modal verbs | Wiktionary classes the modals and wissen as preterite-present, neither strong, weak nor mixed. The deck carries that as a fourth verb class, `preterite_present`, taken from the data, and it counts toward the verb-class target instead of a `closed_classes.toml` entry. |
 
 ## Implementation defaults
 
@@ -149,7 +152,7 @@ karteikasten/
 ├─ reports/               # coverage and diff reports
 └─ data/                  # gitignored
    ├─ raw/                # source snapshots
-   ├─ work/               # stage outputs (parquet), curation.sqlite
+   ├─ work/               # Kaikki extracts, stage cache, processed audio, curation.sqlite (D48)
    └─ dist/deck/<version>/
 ```
 
@@ -191,10 +194,10 @@ Fetch rules:
 
 ## Pipeline stages
 
-`nix run .#build` runs stages 20–70 over the snapshot in `data/raw/`; the same inputs must give byte-identical outputs.
+`nix run .#build` runs stages 20–70 over the snapshot in `data/raw/`; the same inputs must give byte-identical outputs. Stage results are cached in `data/work/cache/` (D48); `--fresh` recomputes everything and `--offline` fails rather than fetch Commons data the snapshot lacks.
 
 - Stage 10 · fetch (network): download every source into `data/raw/` and update `sources.lock.json`.
-- Stage 20 · lexicon: load both Kaikki editions into DuckDB, German entries only, as `lex_entry`, `lex_sense`, `lex_form`, `lex_sound`.
+- Stage 20 · lexicon: extract the German entries of both Kaikki editions to JSONL with byte-offset indexes, and build the lexicon (lemmas, forms, etymology ids, separable particles, contractions, ordinals) from them (D48).
 - Stage 30 · frequency and lemmas:
   - Convert spoken and written word-form counts to per-million.
   - Map each form to its candidate (lemma, POS, etymology) via Kaikki `form_of` links and each lemma's `forms` list.
@@ -210,12 +213,13 @@ Fetch rules:
   - Up to 3 English glosses and 3 German definitions; strip wiki markup; keep register labels as tags.
   - IPA preferring Germany; syllables from German-Wiktionary hyphenation; stress from the IPA stress mark. When syllable counts disagree: no highlight and a report entry.
   - Gender and article; function-word flag; closed classes merged from `overrides/closed_classes.toml`.
-  - Cognate from etymology text ("cognate with English X", "compare English X") plus an exceptions list.
+  - Cognate from etymology text ("cognate with English X", "compare English X"), kept only when X is among the word's English glosses, plus `[no_cognate]` in `words.toml` (D49).
+  - Case tables for articles, determiners and pronouns; ordinals for numerals; preposition contractions.
 - Stage 50 · media:
   - Audio: candidates from Kaikki sounds. Prefer the Commons author covering most of the deck; words they lack fall through to the author with the next most coverage, and so on (D24). Regional files only as a last resort, tagged. Own recordings always win.
   - Audio processing: fetch author and licence, then ffmpeg trims silence to 100 ms padding, normalizes to about −16 LUFS, and writes mono MP3 at about 48 kbps.
 - Stage 60 · sentences:
-  - Candidates: Tatoeba sentences with English translations, plus Wiktionary examples.
+  - Candidates: Tatoeba sentences with English translations, plus Wiktionary usage examples (never quotations, which cite outside works). Sentences and translations without a named author are left out.
   - Match any inflected form; for separable verbs, stem and particle must both appear, particle later.
   - Keep 4–10 tokens, prefer native authors (Tatoeba level 5), skip sentences tagged as needing review. Store the top 5 per word.
 - Stage 70 · bundle: write the deck bundle. `--profile personal|public`; `personal` (the development build) uses the whole data set; `public` drops NC/ND items such as NC-licensed audio (D26, D46).
@@ -229,7 +233,7 @@ Each word shows a few key forms on the card and full tables behind the Formen bu
 | Word type | Key forms on the card | Full tables (Formen) |
 | --- | --- | --- |
 | Noun | Article/gender, plural, genitive singular. Flags: weak noun (der Junge → des Jungen), plural-only, singular-only | 4 cases × singular/plural, with articles |
-| Verb | er-form; du-form if the stem changes (du fährst); Präteritum (er); Partizip II with haben/sein. Flags: separable prefix, reflexive, strong/weak/mixed | Present (6 persons), Präteritum (6), imperative (du/ihr/Sie), Konjunktiv II for modals and haben/sein/werden |
+| Verb | er-form; du-form if the stem changes (du fährst); Präteritum (er); Partizip II with haben/sein. Flags: separable prefix, reflexive, strong/weak/mixed/preterite-present (D50) | Present (6 persons), Präteritum (6), imperative (du/ihr/Sie), Konjunktiv II for modals and haben/sein/werden |
 | Adjective | Comparative, superlative (am …sten), irregular stem (hoch → hohe), predicative-only flag | None per word; the generic ending table sits in Info |
 | Adverb | Comparison where it exists (gern → lieber → am liebsten) | None |
 | Article, determiner, pronoun | None | Case × gender/number table |
@@ -242,7 +246,7 @@ Closed classes (about 30 core prepositions, the conjunctions, articles and prono
 
 ## Deck bundle and overrides
 
-A deck is a versioned, content-addressed directory named `YYYY.MM.DD-<short hash of inputs>`, so identical inputs give an identical deck.
+A deck is a versioned, content-addressed directory named `YYYY.MM.DD-<short hash of inputs>`, so identical inputs give an identical deck. The date is the snapshot's (its latest retrieval in `sources.lock.json`), not the build's; the inputs are the snapshot, the overrides, the settings, the pipeline code and the ffmpeg version.
 
 ```
 data/dist/deck/<version>/
@@ -259,8 +263,8 @@ SQLite tables:
 
 | Table | Columns |
 | --- | --- |
-| `word` | `id` PK, `rank`, `lemma`, `pos`, `gender`, `article`, `token_share`, `coverage_cum`, `ipa`, `syllables`, `stress_syllable`, `cognate_en`, `flags` JSON, `key_forms` JSON, `tables` JSON, `gloss_en` JSON, `gloss_de` JSON, `audio_id` |
-| `sentence` | `id` PK, `word_id`, `de`, `en`, `source`, `source_ref`, `author`, `license`, `deck_token_ids` JSON, `out_of_deck`, `hl_start`, `hl_end`, `score` |
+| `word` | `id` PK, `rank`, `lemma`, `pos`, `gender`, `article`, `token_share`, `coverage_cum`, `ipa`, `syllables`, `stress_syllable`, `cognate_en`, `flags` JSON, `key_forms` JSON, `tables` JSON, `gloss_en` JSON, `gloss_de` JSON, `audio_id`, `provenance` JSON |
+| `sentence` | `id`, `word_id` (together the PK: one sentence can serve several words), `position`, `de`, `en`, `source`, `source_ref`, `author`, `license`, `en_author`, `en_license`, `native`, `deck_token_ids` JSON, `out_of_deck`, `hl_start`, `hl_end`, `score` |
 | `media` | `id` PK, `kind`, `path`, `source`, `source_url`, `author`, `license`, `license_url`, `sha256`, `duration_ms` |
 | `source` | `id` PK, `name`, `url`, `license`, `retrieved_at`, `sha256` |
 
@@ -270,9 +274,9 @@ The pipeline also writes `data/work/curation.sqlite`: all audio and sentence can
 
 Overrides are committed and re-applied on every build; an override that no longer matches anything fails the build.
 
-- `words.toml`: include/exclude, pinned ids, merges and splits, hidden or reordered senses, manual gloss fixes (provenance `manual`).
-- `closed_classes.toml`: prepositions (case, contractions), conjunctions (type), article and pronoun tables.
-- `sentences.toml`: pinned and banned sentences.
+- `words.toml`: include/exclude, pinned ids, merges and splits, hidden or reordered senses, manual gloss fixes (provenance `manual`). Phase 3 implements `[exclude]`, `[merge]`, `[gloss_en]` and `[gloss_de]` (which also hide or reorder senses) and `[no_cognate]` (D49); the rest comes when the curation tool needs it.
+- `closed_classes.toml`: prepositions (case, contractions), conjunctions (type), article and pronoun tables. Drafted from both editions' categories and tags by `python -m karteikasten_pipeline.draft`, then checked by hand; the tables come from the data (stage 40).
+- `sentences.toml`: pinned and banned sentences, `[pin]` and `[ban]` by word id.
 - `audio/`: own recordings, named by word id with `#` replaced by `_` (`Hand_noun_1.flac`).
 
 ## App layout and look
