@@ -24,20 +24,20 @@ def test_find_root_outside_a_checkout(tmp_path):
         find_root(tmp_path)
 
 
-@pytest.mark.parametrize(
-    "argv",
-    [
-        ["build", "--profile", "public"],
-        ["report"],
-    ],
-)
-def test_stub_commands_report_their_checkout(tmp_path, monkeypatch, capsys, argv):
+def test_build_without_a_snapshot_fails_cleanly(tmp_path, monkeypatch, capsys):
     root = checkout(tmp_path)
+    (root / "config" / "pipeline.toml").write_text(
+        'n_max = 10\nprofile = "personal"\n[frequency]\nspoken_weight = 0.7\n[http]\ncontact = "x"\n'
+    )
     monkeypatch.chdir(root)
-    assert main(argv) == 0
-    output = capsys.readouterr().out
-    assert "TODO" in output
-    assert str(root) in output
+    assert main(["build", "--offline"]) == 1
+    assert "nix run .#fetch" in capsys.readouterr().err
+
+
+def test_report_needs_a_deck(tmp_path, monkeypatch, capsys):
+    monkeypatch.chdir(checkout(tmp_path))
+    assert main(["report"]) == 1
+    assert "no deck yet" in capsys.readouterr().err
 
 
 def test_outside_a_checkout_fails_with_a_usage_error(tmp_path, monkeypatch):

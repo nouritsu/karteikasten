@@ -1,4 +1,4 @@
-# Pipeline configuration. Values marked "Phase 1" get measured on real data first.
+# Pipeline configuration, read by `nix run .#build` and part of every deck's input hash.
 
 # Words in the deck; the app lets you study any n up to this.
 n_max = 2000
@@ -9,9 +9,18 @@ profile = "personal"
 [frequency]
 # D6: weight of the spoken (subtitle) counts in the weighted geometric mean.
 spoken_weight = 0.7
-# epsilon = ...           # per million, for forms missing from one corpus (Phase 1)
+# Per million, added before the geometric mean so a form missing from one corpus
+# still counts (the value the Phase 1 report was built with).
+epsilon = 0.1
 
 [http]
 # Contact in every request's User-Agent, so upstream operators can reach you
 # instead of blocking the fetcher (Wikimedia User-Agent policy).
 contact = "https://nouritsu.com"
+
+[recordings]
+# Credit for your own recordings in overrides/audio/ (spec: Own recordings). A
+# build with a recording fails while these are empty, since every media item
+# needs an author and a licence.
+author = ""
+license = ""
