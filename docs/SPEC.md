@@ -57,7 +57,7 @@ All 22 decisions are final; D19 was not answered, so it takes the recommended de
 
 ### Amendments
 
-D23–D26 were accepted after Phase 1 on 2026-10-06 (evidence in `reports/phase1-coverage.md`); D27–D39 come from your Phase 2 review on 2026-10-07; D40–D45 from your request for an APK the same day; D46 from your request on 2026-10-15; D47 records your Nix choices, the plain flake and alejandra from Phase 0 on 2026-10-06 and the devenv shell from 2026-10-19; D48 and D49 are your choices in Phase 3 on 2026-10-22, and D50 is proposed with the Phase 3 report. The sections below are amended where they apply and marked with the decision's id.
+D23–D26 were accepted after Phase 1 on 2026-10-06 (evidence in `reports/phase1-coverage.md`); D27–D39 come from your Phase 2 review on 2026-10-07; D40–D45 from your request for an APK the same day; D46 from your request on 2026-10-15; D47 records your Nix choices, the plain flake and alejandra from Phase 0 on 2026-10-06 and the devenv shell from 2026-10-19; D48–D50 are your choices in Phase 3 on 2026-10-22. The sections below are amended where they apply and marked with the decision's id.
 
 | ID | Topic | Decision |
 | --- | --- | --- |
@@ -88,7 +88,7 @@ D23–D26 were accepted after Phase 1 on 2026-10-06 (evidence in `reports/phase1
 | D47 | Nix layout | A plain flake replaces flake-parts with the dendritic pattern and import-tree: each package is a `callPackage` file under `nix/`, and `flake.nix` wires the apps, dev shell, checks and formatter itself. alejandra, run by treefmt as `nix fmt`, replaces nixfmt. The dev shell is devenv in flake mode with the house style from `nouritsu/conf-nixos`, so direnv and `nix flake check` need `--no-pure-eval`. The flake targets x86_64-linux only, where androidenv's SDK tools run. |
 | D48 | Stage storage | Stage 20 keeps the German entries of both Kaikki editions as JSONL extracts in `data/work/kaikki/`, with byte-offset indexes, and builds the lexicon in Python; DuckDB counts the Leipzig corpora. Stage outputs are cached in `data/work/cache/` under a hash of their inputs (lock hashes, overrides, settings) and of the code that computes them. `deck.sqlite` stays the canonical deck. Replaces stage 20's `lex_*` tables and the parquet stage outputs. |
 | D49 | Cognate filter | A cognate hint ships only when the English word the etymology names is among the word's own English glosses (plural, -ed and -ing endings folded): Haus → house stays, schon → pretty goes. `words.toml` `[no_cognate]` drops any wrong hint that remains. This is stage 40's exceptions list. |
-| D50 | Modal verbs | Wiktionary classes the modals and wissen as preterite-present, neither strong, weak nor mixed. The deck carries that as a fourth verb class, `preterite_present`, taken from the data, and it counts toward the verb-class target instead of a `closed_classes.toml` entry. |
+| D50 | Modal verbs | Verbs get a fourth class, `modal`, as language teaching does: the six verbs in the English edition's "German modal verbs" category (können, müssen, dürfen, sollen, mögen, wollen); the card says "Modalverb". Other verbs Wiktionary classes as preterite-present (wissen: weiß, wusste, gewusst) are `mixed`, where teaching materials list wissen. |
 
 ## Implementation defaults
 
@@ -233,7 +233,7 @@ Each word shows a few key forms on the card and full tables behind the Formen bu
 | Word type | Key forms on the card | Full tables (Formen) |
 | --- | --- | --- |
 | Noun | Article/gender, plural, genitive singular. Flags: weak noun (der Junge → des Jungen), plural-only, singular-only | 4 cases × singular/plural, with articles |
-| Verb | er-form; du-form if the stem changes (du fährst); Präteritum (er); Partizip II with haben/sein. Flags: separable prefix, reflexive, strong/weak/mixed/preterite-present (D50) | Present (6 persons), Präteritum (6), imperative (du/ihr/Sie), Konjunktiv II for modals and haben/sein/werden |
+| Verb | er-form; du-form if the stem changes (du fährst); Präteritum (er); Partizip II with haben/sein. Flags: separable prefix, reflexive, strong/weak/mixed/modal (D50) | Present (6 persons), Präteritum (6), imperative (du/ihr/Sie), Konjunktiv II for modals and haben/sein/werden |
 | Adjective | Comparative, superlative (am …sten), irregular stem (hoch → hohe), predicative-only flag | None per word; the generic ending table sits in Info |
 | Adverb | Comparison where it exists (gern → lieber → am liebsten) | None |
 | Article, determiner, pronoun | None | Case × gender/number table |

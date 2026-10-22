@@ -1,4 +1,4 @@
-# Coverage: deck 2026.10.22-640b71e
+# Coverage: deck 2026.10.22-eca993c
 
 Profile `personal`, 2,000 words. Targets apply to the top 2,000 after curation (confirmed 2026-10-22).
 
@@ -13,9 +13,9 @@ Profile `personal`, 2,000 words. Targets apply to the top 2,000 after curation (
 | Noun plural (or flag) | 100.0% of 5 | 100.0% of 120 | 99.7% of 791 | 100% | no |
 | Noun genitive (or plural only) | 100.0% of 5 | 100.0% of 120 | 99.7% of 791 | 100% | no |
 | Verb er-form, Präteritum, Partizip II, auxiliary | 100.0% of 18 | 100.0% of 129 | 100.0% of 560 | 100% | yes |
-| Verb class (strong, weak, mixed, preterite-present) | 100.0% of 18 | 100.0% of 129 | 100.0% of 560 | ≥ 98% | yes |
-| Preposition case | 100.0% of 14 | 100.0% of 25 | 97.6% of 42 | 100% | no |
-| Conjunction type | 88.9% of 9 | 94.1% of 17 | 96.8% of 31 | 100% | no |
+| Verb class (strong, weak, mixed, modal) | 100.0% of 18 | 100.0% of 129 | 100.0% of 560 | ≥ 98% | yes |
+| Preposition case | 100.0% of 14 | 100.0% of 25 | 100.0% of 42 | 100% | yes |
+| Conjunction type | 100.0% of 9 | 100.0% of 17 | 100.0% of 31 | 100% | yes |
 | Stress highlight | 95.0% | 93.6% | 93.2% | ≥ 93% | yes |
 | 5 sentences | 100.0% | 99.8% | 99.5% | ≥ 99% | yes |
 | Syllables | 99.0% | 99.0% | 99.2% |  |  |
@@ -37,8 +37,6 @@ Profile `personal`, 2,000 words. Targets apply to the top 2,000 after curation (
 - Noun gender or plural only (3): `Dr.#noun#1`, `TU#noun#1`, `S.#noun#1`
 - Noun plural (or flag) (2): `TU#noun#1`, `S.#noun#1`
 - Noun genitive (or plural only) (2): `TU#noun#1`, `S.#noun#1`
-- Preposition case (1): `lang#postp#1`
-- Conjunction type (1): `doch#conj#1`
 - Stress highlight (136): `Sie#pron#1`, `aber#adv#1`, `oder#conj#1`, `über#prep#1`, `aber#conj#1`, `warum#adv#1`, `S#noun#1`, `okay#adj#1`, `Leute#noun#1`, `Problem#noun#1`, `darüber#adv#1`, `Abend#noun#1`, `Hilfe#noun#1`, `darauf#adv#1`, `daran#adv#1`, `Idee#noun#1`, `Dr.#noun#1`, `vorstellen#verb#1`, `Chance#noun#1`, `darum#adv#1`, `egal#adj#1`, `Eltern#noun#1`, `Million#noun#1`, `überhaupt#adv#1`, `über#adv#1`, `oben#adv#1`, `Information#noun#1`, `funktionieren#verb#1`, `übernehmen#verb#1`, `eben#adv#1`, `besondere#adj#1`, `herausfinden#verb#1`, `Beispiel#noun#1`, `eher#adv#1`, `interessieren#verb#1`, `überall#adv#1`, `Ruf#noun#1`, `interessant#adj#1`, `TU#noun#1`, `Patient#noun#1`, `N#noun#1`, `Situation#noun#1`, `überprüfen#verb#1`, `Interesse#noun#1`, `darin#adv#1`, `Kontrolle#noun#1`, `gegenüber#prep#1`, `S.#noun#1`, `okay#intj#1`, `überleben#verb#1`, `hinaus#adv#1`, `Energie#noun#1`, `überlegen#verb#2`, `Position#noun#1`, `Kosten#noun#1`, `traurig#adj#1`, `offiziell#adj#1`, `ebenfalls#adv#1`, `Überraschung#noun#1`, `daraus#adv#1` and 76 more
 - 5 sentences (10): `Dr.#noun#1`, `TU#noun#1`, `S.#noun#1`, `hi#intj#1`, `Deal#noun#1`, `St.#adj#1`, `Stopp#noun#1`, `Madame#noun#1`, `b.#prep#1`, `Story#noun#1`
 
