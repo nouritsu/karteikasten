@@ -3,18 +3,13 @@
 # Words in the deck; the app lets you study any n up to this.
 n_max = 2000
 # personal | public (D26). `personal` is the development build and uses every
-# source, NC data included (ARASAAC pictograms, is_concrete from the Köper norms).
-# `public` drops NC/ND items and ships is_concrete only from your image decisions.
+# source, NC data included. `public` drops NC/ND items.
 profile = "personal"
 
 [frequency]
 # D6: weight of the spoken (subtitle) counts in the weighted geometric mean.
 spoken_weight = 0.7
 # epsilon = ...           # per million, for forms missing from one corpus (Phase 1)
-
-[images]
-# min_concreteness = ...  # Köper & Schulte im Walde norms, tuned on your labelled sample (Phase 1)
-# min_imageability = ...
 
 [http]
 # Contact in every request's User-Agent, so upstream operators can reach you

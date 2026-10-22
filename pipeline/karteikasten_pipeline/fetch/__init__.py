@@ -19,7 +19,7 @@ def utc_timestamp(when: datetime) -> str:
 
 
 def snapshot(client: Client, raw: Path, lock_path: Path, relative: str, url: str, source: str) -> Path:
-    """One per-item file (a Commons recording, an ARASAAC pictogram) into data/raw, recorded
+    """One per-item file (a Commons recording) into data/raw, recorded
     in the lock like any other snapshot; an existing locked file is reused."""
     dest = raw / relative
     entries = lock.load(lock_path)

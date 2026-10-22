@@ -1,7 +1,7 @@
 """Every upstream file the pipeline reads, pinned to a version wherever the upstream has one.
 
-Commons audio and ARASAAC images are fetched per word once the deck's words are
-known; everything here is a whole-file snapshot. Field notes: docs/sources/.
+Commons audio is fetched per word once the deck's words are known; everything
+here is a whole-file snapshot. Field notes: docs/sources/.
 """
 
 from dataclasses import dataclass
@@ -9,8 +9,6 @@ from dataclasses import dataclass
 GITHUB_RAW = "https://raw.githubusercontent.com"
 FREQUENCYWORDS_COMMIT = "072bbed282316a23651aa7068c7173aa7898cf80"
 UD_RELEASE = "r2.18"
-OPENMOJI_RELEASE = "17.0.0"
-CLDR_RELEASE = "release-48-2"
 LEIPZIG = "https://downloads.wortschatz-leipzig.de/corpora"
 TATOEBA = "https://downloads.tatoeba.org/exports/per_language"
 DEREWO_PAGE = (
@@ -116,53 +114,6 @@ SOURCES: tuple[Source, ...] = (
             RawFile(
                 "kaikki-de/de-extract.jsonl.gz",
                 "https://kaikki.org/dictionary/downloads/de/de-extract.jsonl.gz",
-            ),
-        ),
-    ),
-    Source(
-        id="arasaac",
-        name="ARASAAC pictograms, German keywords",
-        licence="CC BY-NC-SA 4.0",
-        files=(RawFile("arasaac/pictograms-de.json", "https://api.arasaac.org/v1/pictograms/all/de"),),
-    ),
-    Source(
-        id="openmoji",
-        name=f"OpenMoji {OPENMOJI_RELEASE}",
-        licence="CC BY-SA 4.0",
-        files=(
-            RawFile(
-                "openmoji/openmoji.json",
-                f"{GITHUB_RAW}/hfg-gmuend/openmoji/{OPENMOJI_RELEASE}/data/openmoji.json",
-            ),
-            RawFile(
-                "openmoji/openmoji-svg-color.zip",
-                f"https://github.com/hfg-gmuend/openmoji/releases/download/{OPENMOJI_RELEASE}/openmoji-svg-color.zip",
-            ),
-        ),
-    ),
-    Source(
-        id="cldr",
-        name=f"Unicode CLDR German emoji annotations ({CLDR_RELEASE})",
-        licence="Unicode License v3",
-        files=(
-            RawFile(
-                "cldr/annotations-de.xml",
-                f"{GITHUB_RAW}/unicode-org/cldr/{CLDR_RELEASE}/common/annotations/de.xml",
-            ),
-            RawFile(
-                "cldr/annotationsDerived-de.xml",
-                f"{GITHUB_RAW}/unicode-org/cldr/{CLDR_RELEASE}/common/annotationsDerived/de.xml",
-            ),
-        ),
-    ),
-    Source(
-        id="koeper",
-        name="Köper & Schulte im Walde (2016) norms for 350,000 German lemmas",
-        licence="CC BY-NC-SA 4.0",
-        files=(
-            RawFile(
-                "koeper/affective_norms.txt.gz",
-                "https://www.ims.uni-stuttgart.de/documents/ressourcen/experiment-daten/affective_norms.txt.gz",
             ),
         ),
     ),

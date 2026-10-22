@@ -1,26 +1,5 @@
 {
   "files": {
-    "arasaac/pictograms-de.json": {
-      "bytes": 6399765,
-      "retrieved_at": "2026-10-06T13:04:52Z",
-      "sha256": "49c56289d07bce847f2b135db00134e496fdd8c777a97f0695bd64e9e01ba6ea",
-      "source": "arasaac",
-      "url": "https://api.arasaac.org/v1/pictograms/all/de"
-    },
-    "cldr/annotations-de.xml": {
-      "bytes": 334981,
-      "retrieved_at": "2026-10-06T13:04:48Z",
-      "sha256": "12eb92612539223d4dcfaec3c45437a31a82022b1c59160873fa4d4439dd7d07",
-      "source": "cldr",
-      "url": "https://raw.githubusercontent.com/unicode-org/cldr/release-48-2/common/annotations/de.xml"
-    },
-    "cldr/annotationsDerived-de.xml": {
-      "bytes": 560052,
-      "retrieved_at": "2026-10-06T13:04:49Z",
-      "sha256": "c7511229fdfa1471cecba195ff4a094d70507a320e5364e0edc8ca5c72eeae09",
-      "source": "cldr",
-      "url": "https://raw.githubusercontent.com/unicode-org/cldr/release-48-2/common/annotationsDerived/de.xml"
-    },
     "commons/audio/CPIDL German - Ja.ogg": {
       "bytes": 10470,
       "retrieved_at": "2026-10-06T16:52:02Z",
@@ -2198,13 +2177,6 @@
       "source": "kaikki-en",
       "url": "https://kaikki.org/dictionary/raw-wiktextract-data.jsonl.gz"
     },
-    "koeper/affective_norms.txt.gz": {
-      "bytes": 6036318,
-      "retrieved_at": "2026-10-06T13:04:49Z",
-      "sha256": "6696b4f2f4b8eaf1f6c9330caf8d7ad9a8f3a4bc75a2360c071bee5aba42c4b9",
-      "source": "koeper",
-      "url": "https://www.ims.uni-stuttgart.de/documents/ressourcen/experiment-daten/affective_norms.txt.gz"
-    },
     "leipzig/deu-de_web_2021_1M.tar.gz": {
       "bytes": 198261152,
       "retrieved_at": "2026-10-06T13:06:05Z",
@@ -2218,20 +2190,6 @@
       "sha256": "2c55dbe53158bb06c323bfa30407972c219c70a643bbad50cc6b08221fa34e7a",
       "source": "leipzig",
       "url": "https://downloads.wortschatz-leipzig.de/corpora/deu_news_2025_1M.tar.gz"
-    },
-    "openmoji/openmoji-svg-color.zip": {
-      "bytes": 5383430,
-      "retrieved_at": "2026-10-06T13:04:48Z",
-      "sha256": "59b0cd9f6fe033818fc02585cea42bea9fba5d68a4d3a3639bfe5d5cc3805689",
-      "source": "openmoji",
-      "url": "https://github.com/hfg-gmuend/openmoji/releases/download/17.0.0/openmoji-svg-color.zip"
-    },
-    "openmoji/openmoji.json": {
-      "bytes": 2193231,
-      "retrieved_at": "2026-10-06T13:04:47Z",
-      "sha256": "ab181dd523021dfbe2b98a13d96ab384b7b3014d17815261bc267fb39d9a211b",
-      "source": "openmoji",
-      "url": "https://raw.githubusercontent.com/hfg-gmuend/openmoji/17.0.0/data/openmoji.json"
     },
     "tatoeba/deu-eng_links.tsv.bz2": {
       "bytes": 3542862,

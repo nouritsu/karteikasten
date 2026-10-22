@@ -44,7 +44,7 @@ def write(
     _dump(dest / "manifest.json", {"schema_version": SCHEMA_VERSION, **manifest})
     _dump(dest / "words.json", sorted(words, key=lambda w: w["rank"]), compact=True)
     _dump(dest / "attribution.json", attribution)
-    used = {item["path"] for word in words for item in (word.get("audio"), word.get("image")) if item}
+    used = {word["audio"]["path"] for word in words if word.get("audio")}
     for relative in sorted(used):
         target = dest / relative
         target.parent.mkdir(parents=True, exist_ok=True)

@@ -1,4 +1,4 @@
-"""Stage 50: audio and image candidates per word.
+"""Stage 50: audio candidates per word.
 
 Audio comes from the Commons files both Wiktionary editions link. Preference
 (D24): the author who covers most of the deck, then authors with less and less
@@ -6,17 +6,10 @@ coverage, so each word keeps the most common voice available; regional files
 (Austria, Switzerland) only after every standard one, and tagged. A file needs
 an author and a licence to be picked, and the public profile skips NC/ND files.
 Own recordings in overrides/audio always win.
-
-Images are for concrete nouns only: ARASAAC pictograms whose German keyword (or
-its plural) is the noun, and OpenMoji emoji whose CLDR German name or keyword is
-the noun. Only images approved in overrides/images.toml ever ship.
 """
 
-import gzip
 import html
-import json
 import re
-import xml.etree.ElementTree as ET
 from collections import defaultdict
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -27,7 +20,6 @@ REGION_TAGS = {"Austria": "Austria", "Switzerland": "Switzerland", "Swiss": "Swi
 # Artist values that name nobody: such files rank after every named author.
 ANONYMOUS = {"", "own work", "myself", "self", "unknown"}
 NON_FREE = re.compile(r"\b(?:NC|ND)\b")
-ARASAAC_COMMON_NOUN = 2
 
 
 @dataclass(frozen=True)
@@ -107,85 +99,6 @@ def pick_audio(
     return min((c for c in candidates if usable(infos.get(c.file), profile)), key=rank, default=None)
 
 
-# -- images ---------------------------------------------------------------------------------
-
-
-def koeper(path: Path) -> dict[str, tuple[float, float]]:
-    """Köper & Schulte im Walde norms: lemma -> (concreteness, imageability), 0-10, higher = more concrete."""
-    norms: dict[str, tuple[float, float]] = {}
-    with gzip.open(path, "rt", encoding="utf-8") as lines:
-        next(lines)
-        for line in lines:
-            word, abst_conc, _arousal, imageability, _valence = line.rstrip("\n").split("\t")
-            norms[word] = (float(abst_conc), float(imageability))
-    return norms
-
-
-@dataclass(frozen=True)
-class Pictogram:
-    id: int
-    keyword: str
-    violence: bool
-    sex: bool
-
-
-def arasaac_index(path: Path) -> dict[str, list[Pictogram]]:
-    """Lower-cased German common-noun keyword (and plural) -> pictograms."""
-    index: dict[str, list[Pictogram]] = defaultdict(list)
-    for item in json.loads(path.read_text(encoding="utf-8")):
-        for keyword in item.get("keywords", []):
-            if keyword.get("type") != ARASAAC_COMMON_NOUN or not keyword.get("keyword"):
-                continue
-            picto = Pictogram(item["_id"], keyword["keyword"], bool(item.get("violence")), bool(item.get("sex")))
-            for text in {keyword["keyword"], keyword.get("plural") or ""} - {""}:
-                index[text.lower()].append(picto)
-    return dict(index)
-
-
-def openmoji_emoji(path: Path) -> dict[str, dict]:
-    """emoji character -> OpenMoji record (hexcode, author), skin-tone variants left out."""
-    return {item["emoji"]: item for item in json.loads(path.read_text(encoding="utf-8")) if not item.get("skintone")}
-
-
-def cldr_names(*paths: Path) -> dict[str, set[str]]:
-    """Lower-cased German CLDR name or keyword -> emoji characters."""
-    names: dict[str, set[str]] = defaultdict(set)
-    for path in paths:
-        for annotation in ET.parse(path).getroot().iter("annotation"):
-            emoji, text = annotation.get("cp"), annotation.text or ""
-            for part in text.split("|"):
-                if part.strip():
-                    names[part.strip().lower()].add(emoji)
-    return dict(names)
-
-
-def cldr_tts(*paths: Path) -> dict[str, str]:
-    """Emoji character -> its German CLDR name ("erhobene Hand")."""
-    tts: dict[str, str] = {}
-    for path in paths:
-        for annotation in ET.parse(path).getroot().iter("annotation"):
-            if annotation.get("type") == "tts" and annotation.text:
-                tts.setdefault(annotation.get("cp"), annotation.text.strip())
-    return tts
-
-
-def rank_emoji(noun: str, emoji: Iterable[str], tts: dict[str, str]) -> list[str]:
-    """Best first: the name is the noun, then names containing it as a word (shortest
-    first), then keyword-only matches. Only an order for review; nothing is chosen
-    here without approval."""
-    word = re.compile(rf"\b{re.escape(noun.lower())}\b")
-
-    def key(e: str) -> tuple[int, int, str]:
-        name = tts.get(e, "").lower()
-        if name == noun.lower():
-            return 0, 0, e
-        if word.search(name):
-            return 1, len(name), e
-        return 2, 0, e
-
-    return sorted(emoji, key=key)
-
-
 # -- processing -----------------------------------------------------------------------------
 # Deterministic: same input and tool versions give the same bytes (bit-exact flags,
 # metadata stripped), and files are named by the SHA-1 of what they contain.
@@ -232,22 +145,3 @@ def process_audio(source: Path, directory: Path) -> tuple[str, int]:
         )
         return _store(out.read_bytes(), directory, ".mp3"), round(float(probe.stdout.strip()) * 1000)
 
-
-def process_pictogram(source: Path, directory: Path) -> tuple[str, int, int]:
-    """ARASAAC PNG to a 256 px WebP. Returns (file name, width, height)."""
-    import subprocess
-    import tempfile
-
-    with tempfile.TemporaryDirectory() as tmp:
-        out = Path(tmp) / "out.webp"
-        subprocess.run(["vips", "thumbnail", str(source), f"{out}[Q=80,strip]", "256"], check=True)
-        size = subprocess.run(["vipsheader", "-f", "width", str(out)], check=True, capture_output=True, text=True)
-        height = subprocess.run(["vipsheader", "-f", "height", str(out)], check=True, capture_output=True, text=True)
-        return _store(out.read_bytes(), directory, ".webp"), int(size.stdout), int(height.stdout)
-
-
-def openmoji_svg(archive: Path, hexcode: str, directory: Path) -> str:
-    import zipfile
-
-    with zipfile.ZipFile(archive) as zf:
-        return _store(zf.read(f"{hexcode}.svg"), directory, ".svg")

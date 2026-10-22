@@ -81,7 +81,7 @@ def enrich_top(n: int = 2000):
 
 
 def coverage(n: int = 2000):
-    """Per-field coverage, audio, images and sentences over the top n; returns a summary dict."""
+    """Per-field coverage, audio and sentences over the top n; returns a summary dict."""
     import json
     from collections import Counter, defaultdict
     from karteikasten_pipeline.readers import tatoeba
@@ -153,27 +153,6 @@ def coverage(n: int = 2000):
     WORK.joinpath("commons-info.pickle").write_bytes(pickle.dumps(infos))
     WORK.joinpath("audio-picks.pickle").write_bytes(pickle.dumps((audio, picks, by_author)))
 
-    # -- images -----------------------------------------------------------------------------------
-    norms = media.koeper(raw / "koeper/affective_norms.txt.gz")
-    ara = media.arasaac_index(raw / "arasaac/pictograms-de.json")
-    om = media.openmoji_emoji(raw / "openmoji/openmoji.json")
-    names = media.cldr_names(raw / "cldr/annotations-de.xml", raw / "cldr/annotationsDerived-de.xml")
-    nouns = [c for c in cards[:n] if c.pos == "noun"]
-    image_rows = []
-    for c in nouns:
-        conc, img = norms.get(c.lemma, (None, None))
-        picto = ara.get(c.lemma.lower(), [])
-        emoji = sorted(e for e in names.get(c.lemma.lower(), set()) if e in om)
-        image_rows.append((c.lemma, conc, img, len(picto), emoji[:3]))
-    summary["images"] = {
-        "nouns": len(nouns),
-        "with_norms": sum(1 for r in image_rows if r[1] is not None),
-        "arasaac_match": sum(1 for r in image_rows if r[3]),
-        "openmoji_match": sum(1 for r in image_rows if r[4]),
-        "either": sum(1 for r in image_rows if r[3] or r[4]),
-    }
-    WORK.joinpath("image-rows.pickle").write_bytes(pickle.dumps(image_rows))
-
     # -- sentences ------------------------------------------------------------------------------
     forms_of: dict[str, set[str]] = defaultdict(set)
     wanted = {r.id for r in top}
@@ -224,7 +203,7 @@ def coverage(n: int = 2000):
     return summary
 
 
-def build_deck(ids: list[str], name: str, concreteness: float = 6.0):
+def build_deck(ids: list[str], name: str):
     """Throwaway deck for the given lemma ids (Phase 1 spike / Phase 2 fixtures)."""
     import json
     from datetime import date
@@ -239,11 +218,6 @@ def build_deck(ids: list[str], name: str, concreteness: float = 6.0):
     audio, picks, by_author = pickle.loads(WORK.joinpath("audio-picks.pickle").read_bytes())
     infos = pickle.loads(WORK.joinpath("commons-info.pickle").read_bytes())
     chosen = pickle.loads(WORK.joinpath("sentences.pickle").read_bytes())
-    norms = media.koeper(raw / "koeper/affective_norms.txt.gz")
-    ara = media.arasaac_index(raw / "arasaac/pictograms-de.json")
-    om = media.openmoji_emoji(raw / "openmoji/openmoji.json")
-    names = media.cldr_names(raw / "cldr/annotations-de.xml", raw / "cldr/annotationsDerived-de.xml")
-    tts = media.cldr_tts(raw / "cldr/annotations-de.xml", raw / "cldr/annotationsDerived-de.xml")
     media_dir = WORK / "media"
     words, credits = [], []
     with Client(config.load(ROOT / "config/pipeline.toml").contact) as client:
@@ -269,36 +243,6 @@ def build_deck(ids: list[str], name: str, concreteness: float = 6.0):
                     "region": pick.region,
                 }
                 credits.append({"kind": "audio", "word": id_, **record["audio"]})
-            record["image"], record["emoji"], record["is_concrete"] = None, None, None
-            if card.pos == "noun":
-                conc, img = norms.get(card.lemma, (None, None))
-                record["is_concrete"] = None if conc is None else conc >= concreteness
-                emoji = media.rank_emoji(card.lemma, [e for e in names.get(card.lemma.lower(), set()) if e in om], tts)
-                if emoji:
-                    record["emoji"] = emoji[0]
-                if record["is_concrete"]:
-                    if emoji:
-                        item = om[emoji[0]]
-                        file = media.openmoji_svg(raw / "openmoji/openmoji-svg-color.zip", item["hexcode"], media_dir / "img")
-                        record["image"] = {
-                            "path": f"media/img/{file}", "kind": "openmoji", "source": "OpenMoji",
-                            "source_url": "https://openmoji.org", "author": item.get("openmoji_author"),
-                            "license": "CC BY-SA 4.0", "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
-                            "approved": False,
-                        }
-                    elif ara.get(card.lemma.lower()):
-                        picto = ara[card.lemma.lower()][0]
-                        url = f"https://static.arasaac.org/pictograms/{picto.id}/{picto.id}_500.png"
-                        src = fetch.snapshot(client, raw, lock_path, f"arasaac/png/{picto.id}.png", url, "arasaac")
-                        file, w, h = media.process_pictogram(src, media_dir / "img")
-                        record["image"] = {
-                            "path": f"media/img/{file}", "kind": "arasaac", "source": "ARASAAC",
-                            "source_url": f"https://arasaac.org/pictograms/de/{picto.id}", "author": "Sergio Palao",
-                            "license": "CC BY-NC-SA 4.0", "license_url": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-                            "approved": False, "width": w, "height": h,
-                        }
-                    if record["image"]:
-                        credits.append({"kind": "image", "word": id_, **record["image"]})
             record["sentences"] = []
             for c in chosen.get(id_, []):
                 sentence = {
@@ -317,7 +261,7 @@ def build_deck(ids: list[str], name: str, concreteness: float = 6.0):
     sources = [{"id": s.id, "name": s.name, "license": s.licence} for s in SOURCES if s.id != "derewo"]
     dest = bundle.write(
         ROOT / "data/dist/deck" / version,
-        manifest={"deck_version": version, "n_max": len(ids), "profile": "personal", "counts": {"words": len(words), "audio": sum(1 for w in words if w["audio"]), "images": sum(1 for w in words if w["image"]), "sentences": sum(len(w["sentences"]) for w in words)}, "note": "Phase 1 spike: not a release deck; images unapproved."},
+        manifest={"deck_version": version, "n_max": len(ids), "profile": "personal", "counts": {"words": len(words), "audio": sum(1 for w in words if w["audio"]), "sentences": sum(len(w["sentences"]) for w in words)}, "note": "Phase 1 spike: not a release deck."},
         words=words,
         attribution={"sources": sources, "items": credits},
         media=media_dir,
