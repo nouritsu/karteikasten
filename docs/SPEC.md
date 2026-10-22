@@ -57,7 +57,7 @@ All 22 decisions are final; D19 was not answered, so it takes the recommended de
 
 ### Amendments
 
-D23–D26 were accepted after Phase 1 on 2026-10-06 (evidence in `reports/phase1-coverage.md`); D27–D39 come from your Phase 2 review on 2026-10-07; D40–D45 from your request for an APK the same day; D46 from your request on 2026-10-15; D47 records your Nix choices, the plain flake and alejandra from Phase 0 on 2026-10-06 and the devenv shell from 2026-10-19; D48–D50 are your choices in Phase 3 on 2026-10-22. The sections below are amended where they apply and marked with the decision's id.
+D23–D26 were accepted after Phase 1 on 2026-10-06 (evidence in `reports/phase1-coverage.md`); D27–D39 come from your Phase 2 review on 2026-10-07; D40–D45 from your request for an APK the same day; D46 from your request on 2026-10-15; D47 records your Nix choices, the plain flake and alejandra from Phase 0 on 2026-10-06 and the devenv shell from 2026-10-19; D48–D50 are your choices in Phase 3 on 2026-10-22, and D51 your choice at the start of Phase 4 the same day. The sections below are amended where they apply and marked with the decision's id.
 
 | ID | Topic | Decision |
 | --- | --- | --- |
@@ -89,6 +89,7 @@ D23–D26 were accepted after Phase 1 on 2026-10-06 (evidence in `reports/phase1
 | D48 | Stage storage | Stage 20 keeps the German entries of both Kaikki editions as JSONL extracts in `data/work/kaikki/`, with byte-offset indexes, and builds the lexicon in Python; DuckDB counts the Leipzig corpora. Stage outputs are cached in `data/work/cache/` under a hash of their inputs (lock hashes, overrides, settings) and of the code that computes them. `deck.sqlite` stays the canonical deck. Replaces stage 20's `lex_*` tables and the parquet stage outputs. |
 | D49 | Cognate filter | A cognate hint ships only when the English word the etymology names is among the word's own English glosses (plural, -ed and -ing endings folded): Haus → house stays, schon → pretty goes. `words.toml` `[no_cognate]` drops any wrong hint that remains. This is stage 40's exceptions list. |
 | D50 | Modal verbs | Verbs get a fourth class, `modal`, as language teaching does: the six verbs in the English edition's "German modal verbs" category (können, müssen, dürfen, sollen, mögen, wollen); the card says "Modalverb". Other verbs Wiktionary classes as preterite-present (wissen: weiß, wusste, gewusst) are `mixed`, where teaching materials list wissen. |
+| D51 | Abbreviations | Abbreviations stay in the deck (they are everyday vocabulary). A word whose only Wiktionary senses are abbreviations takes them as its English glosses ("abbreviation of Doktor") and is flagged `abbreviation`; abbreviated nouns need no gender, plural or genitive, so the noun checks and coverage fields skip them. |
 
 ## Implementation defaults
 
@@ -163,7 +164,7 @@ Nix files (D47):
 - `pipeline.nix`: `packages.pipeline`, the Python CLI; `flake.nix` wraps it in fish via `pkgs.writers.writeFishBin` as `nix run .#fetch`, `.#build`, `.#report`.
 - `app.nix`: `packages.app` via `buildNpmPackage`; output is static files. `app-assets.nix` supplies its font subsets and icons.
 - `apk.nix`: `packages.apk`, an unsigned release APK with the stub deck; `apk-app.nix` is `nix run .#apk`, which bundles a real deck and signs it (D42, D43).
-- `curate.nix`: `packages.curate` via `rustPlatform.buildRustPackage`, runnable as `nix run .#curate`.
+- `curate.nix`: `packages.curate` via `rustPlatform.buildRustPackage`; `nix run .#curate` wraps it with ffmpeg, ffplay and the pipeline on PATH.
 
 Flake builds only see git-tracked files, and `data/` is gitignored, so the pipeline runs via `nix run` in the working tree. Determinism comes from `sources.lock.json` and `flake.lock`, not from the Nix sandbox.
 
@@ -246,7 +247,7 @@ Closed classes (about 30 core prepositions, the conjunctions, articles and prono
 
 ## Deck bundle and overrides
 
-A deck is a versioned, content-addressed directory named `YYYY.MM.DD-<short hash of inputs>`, so identical inputs give an identical deck. The date is the snapshot's (its latest retrieval in `sources.lock.json`), not the build's; the inputs are the snapshot, the overrides, the settings, the pipeline code and the ffmpeg version.
+A deck is a versioned, content-addressed directory named `YYYY.MM.DD-<short hash of inputs>`, so identical inputs give an identical deck. The date is the snapshot's (its latest retrieval in `sources.lock.json`), not the build's; the inputs are the snapshot, the overrides, the settings, the pipeline code and the ffmpeg version. Of the Commons recordings in the snapshot, only those the deck uses count, so one fetched just to listen to in the curation tool changes nothing.
 
 ```
 data/dist/deck/<version>/
@@ -274,7 +275,7 @@ The pipeline also writes `data/work/curation.sqlite`: all audio and sentence can
 
 Overrides are committed and re-applied on every build; an override that no longer matches anything fails the build.
 
-- `words.toml`: include/exclude, pinned ids, merges and splits, hidden or reordered senses, manual gloss fixes (provenance `manual`). Phase 3 implements `[exclude]`, `[merge]`, `[gloss_en]` and `[gloss_de]` (which also hide or reorder senses) and `[no_cognate]` (D49); the rest comes when the curation tool needs it.
+- `words.toml`: include/exclude, pinned ids, merges and splits, hidden or reordered senses, manual gloss fixes (provenance `manual`). Phase 3 implements `[exclude]`, `[merge]`, `[gloss_en]` and `[gloss_de]` (which also hide or reorder senses) and `[no_cognate]` (D49); Phase 4 adds `[audio]`, the Commons file a word uses instead of the build's pick (one of its candidates, with author and licence). The rest comes when the curation tool needs it.
 - `closed_classes.toml`: prepositions (case, contractions), conjunctions (type), article and pronoun tables. Drafted from both editions' categories and tags by `python -m karteikasten_pipeline.draft`, then checked by hand; the tables come from the data (stage 40).
 - `sentences.toml`: pinned and banned sentences, `[pin]` and `[ban]` by word id.
 - `audio/`: own recordings, named by word id with `#` replaced by `_` (`Hand_noun_1.flac`).
@@ -506,15 +507,19 @@ Haptics: one short vibration on Weiß ich and a double one on Weiß ich nicht, t
 
 `nix run .#curate` opens a ratatui TUI that turns pipeline candidates into committed overrides.
 
-- Reads `data/work/curation.sqlite`; writes `overrides/*.toml` and `overrides/audio/`.
-- Views: issue queue (blocking first), word detail, sentence picker, audio player and recorder.
-- Recording: `record_cmd` and `play_cmd` in `curate/curate.toml`. Defaults are ffmpeg capture via PipeWire/PulseAudio and ffplay for playback; files land in `overrides/audio/`.
-- Keys: j/k move, Enter open, a accept, x reject, n/p next/previous candidate, Space play, r record, / search, q quit.
+- Reads `data/work/curation.sqlite` (every word's card, all audio candidates, the best 20 sentence candidates, the issues); writes `overrides/words.toml` `[audio]`, `overrides/sentences.toml` `[pin]`/`[ban]` and `overrides/audio/`. Each change is saved at once with toml_edit, so comments and layout survive; the next build applies it, and the header says when overrides are newer than the database.
+- Views: issue queue (blocking first, then by rank; `t` shows every word), and a word view with its card, the audio picker with the recorder, and the sentence picker.
+- Commands in `curate/curate.toml`: `record_cmd` (ffmpeg capture via PipeWire/PulseAudio; r again sends SIGINT so the file is closed properly), `play_cmd` (ffplay) and `fetch_cmd`. Candidates the build did not pick are not in the snapshot; Space fetches them first with `fetch --commons FILE`, which adds them to `data/raw` and `sources.lock.json` like any Commons file.
+- Keys: j/k move, Enter open, Tab audio or sentences, a accept (pin), x reject (ban a sentence, unpin audio), n/p next/previous candidate, Space play, r record, / search, Esc back, q quit.
 
 | Severity | Checks |
 | --- | --- |
-| Blocking | Noun without gender or plural; verb without Partizip II or auxiliary; no English gloss; any item without licence or author |
-| Warning | No audio; no sentence; syllable/stress mismatch; audio duration outlier; orphaned override |
+| Blocking | Noun without gender or plural (abbreviations exempt, D51); verb without Partizip II or auxiliary; no English gloss; any item without licence or author |
+| Warning | No audio; no sentence; syllable/stress mismatch; audio duration outlier |
+
+An orphaned override fails the build instead of warning (Overrides), so it never reaches the queue.
+
+`nix run .#report -- --diff [OLD [NEW]]` writes `reports/diff.md`: which inputs changed, words entering and leaving the deck, rank moves, card changes per field, coverage, and the issues fixed and new. Without versions it compares the latest deck with the one built before it.
 
 ## APK
 
@@ -561,7 +566,7 @@ Phase 0 unlocks both spikes, and Phase 3 starts only after the coverage report a
   - Done when two builds from the same snapshot are byte-identical; every media item and sentence has source, author and licence; pytest passes the tricky-word fixtures; the coverage targets set in Phase 1 are met (confirmed 2026-10-22, last section of `reports/phase1-coverage.md`).
 - Phase 4 · Curation and QA
   - Curation tool with issue queue, pickers and recorder; automated checks; build-to-build diff report.
-  - Done when the top 500 words have no blocking issues (D46).
+  - Done when the top 500 words have no blocking issues (D46). Passed on 2026-10-22.
 - Phase 5 · Core study loop
   - Engine: score state machine, grade bands, queue, ts-fsrs adapter, 04:00 rollover. Storage; deck loader (D41).
   - Full card flow including Intro, Kenne ich schon, undo, dynamic sentence choice, EN/DE toggle, pause while hidden, haptics.
