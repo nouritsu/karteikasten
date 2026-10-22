@@ -20,8 +20,8 @@ Build Karteikasten phase by phase (see Phases), stop at each phase's acceptance 
 Karteikasten is a phone-only Android app (D40) that teaches the top n German words (default 2,000) with homely, ratatui-styled flashcards built only from openly licensed data.
 
 - Frequency: a spoken-weighted blend of subtitle and news/web corpora, lemmatized with Wiktionary.
-- Per word: type, gender, IPA with syllables and stress, audio, picture (concrete nouns), key forms and full tables, meaning (English and German, toggle), example sentences, English cognate hint.
-- Look: monospace text, box borders with inset titles, Unicode symbol icons (D27). It is rendered in HTML/CSS, not a terminal grid, so the word can be large and pictures fit.
+- Per word: type, gender, IPA with syllables and stress, audio, key forms and full tables, meaning (English and German, toggle), example sentences, English cognate hint. No pictures (D46).
+- Look: monospace text, box borders with inset titles, Unicode symbol icons (D27). It is rendered in HTML/CSS, not a terminal grid, so the word can be large.
 - Learning: two buttons (Weiß ich / Weiß ich nicht), a decaying score with hint penalties, and the score mapped to an FSRS-6 grade.
 - Scope: personal use now, data kept release-ready. The desktop only runs the data pipeline and the curation tool.
 - "Karteikasten" is a working title; rename freely.
@@ -57,7 +57,7 @@ All 22 decisions are final; D19 was not answered, so it takes the recommended de
 
 ### Amendments
 
-D23–D26 were accepted after Phase 1 on 2026-10-06 (evidence in `reports/phase1-coverage.md`); D27–D39 come from your Phase 2 review on 2026-10-07; D40–D45 from your request for an APK the same day. The sections below are amended where they apply and marked with the decision's id.
+D23–D26 were accepted after Phase 1 on 2026-10-06 (evidence in `reports/phase1-coverage.md`); D27–D39 come from your Phase 2 review on 2026-10-07; D40–D45 from your request for an APK the same day; D46 from your request on 2026-10-15. The sections below are amended where they apply and marked with the decision's id.
 
 | ID | Topic | Decision |
 | --- | --- | --- |
@@ -84,6 +84,7 @@ D23–D26 were accepted after Phase 1 on 2026-10-06 (evidence in `reports/phase1
 | D43 | Audience and signing | Sideloaded to your phone and friends' (adb or the file). Signed with this machine's Android debug key (`~/.android/debug.keystore`) outside the Nix store; keep that file, since updates need the same key. The `personal` profile stays (D26). |
 | D44 | Application id | `com.nouritsu.karteikasten`. It never changes: another id is another app, with empty progress. |
 | D45 | APK versions | versionName is the app version plus the deck version (`0.1.0+2026.10.06-bdc9ce1`); versionCode is the commit count, so a new deck without a new commit needs `--version-code`. |
+| D46 | No pictures | The Bild hint and its sheet go: a picture gives the answer away, and approving images noun by noun was manual work for little gain. With them go ARASAAC, OpenMoji with the CLDR annotations, the Köper norms, `is_concrete`, `emoji`, `overrides/images.toml` and the concreteness labels. The four hint buttons that remain sit two to a row. Replaces D11; amends D31; the profiles of D26 stay, without `is_concrete`. |
 
 ## Implementation defaults
 
@@ -126,7 +127,7 @@ karteikasten/
 │  ├─ app.nix             # packages.app (static web build)
 │  ├─ apk.nix             # packages.apk (Capacitor + Gradle)
 │  ├─ curate.nix          # packages.curate (ratatui tool)
-├─ config/pipeline.toml   # n_max, blend weight, profile, thresholds
+├─ config/pipeline.toml   # n_max, blend weight, profile
 ├─ sources.lock.json      # url, retrieved_at, bytes, sha256 per raw file
 ├─ pipeline/              # Python package; deps come from Nix
 │  ├─ karteikasten_pipeline/{fetch,stages,sql}/
@@ -134,7 +135,6 @@ karteikasten/
 ├─ overrides/             # human curation, committed
 │  ├─ words.toml
 │  ├─ closed_classes.toml
-│  ├─ images.toml
 │  ├─ sentences.toml
 │  └─ audio/              # own recordings
 ├─ curate/                # Rust + ratatui
@@ -151,7 +151,7 @@ karteikasten/
 
 Nix modules:
 
-- `devshell.nix`: `python3.withPackages` (duckdb, httpx, pytest, a CoNLL-U reader or a small parser), `duckdb` CLI, `sqlite`, `ffmpeg`, `vips`, Node.js LTS, Rust toolchain (cargo, rustc, clippy, rustfmt, rust-analyzer).
+- `devshell.nix`: `python3.withPackages` (duckdb, httpx, pytest, a CoNLL-U reader or a small parser), `duckdb` CLI, `sqlite`, `ffmpeg`, Node.js LTS, Rust toolchain (cargo, rustc, clippy, rustfmt, rust-analyzer).
 - `pipeline.nix`: fish wrappers via `pkgs.writers.writeFishBin` around the Python CLI, exposed as `nix run .#fetch`, `.#build`, `.#report`.
 - `app.nix`: `packages.app` via `buildNpmPackage`; output is static files.
 - `apk.nix`: `packages.apk`, an unsigned release APK; `nix run .#apk` signs it (D42, D43).
@@ -161,7 +161,7 @@ Flake builds only see git-tracked files, and `data/` is gitignored, so the pipel
 
 ## Data sources
 
-Twelve sources feed the deck, each pinned in `sources.lock.json`; only openly licensed data ships, and DeReWo stays a private cross-check.
+Nine sources feed the deck, each pinned in `sources.lock.json`; only openly licensed data ships, and DeReWo stays a private cross-check.
 
 | Source | Used for | Licence | Ships? | Where |
 | --- | --- | --- | --- | --- |
@@ -172,9 +172,6 @@ Twelve sources feed the deck, each pinned in `sources.lock.json`; only openly li
 | Kaikki, English-Wiktionary German dictionary | POS, gender, IPA, English glosses, forms, categories, etymology, examples, audio URLs | CC BY-SA | Yes | [raw-wiktextract-data.jsonl.gz](https://kaikki.org/dictionary/raw-wiktextract-data.jsonl.gz), German entries extracted (D23) |
 | Kaikki, German-Wiktionary extract | German definitions, hyphenation, IPA and forms cross-check | CC BY-SA | Yes | [de-extract.jsonl.gz](https://kaikki.org/dictionary/downloads/de/de-extract.jsonl.gz), about 294 MB |
 | Wikimedia Commons | Audio files, per-file author and licence | Per file | Yes | Kaikki `ogg_url`/`mp3_url` + Commons API `imageinfo` `extmetadata` |
-| ARASAAC | Pictograms | CC BY-NC-SA 4.0 | Personal profile only | [arasaac.org](https://arasaac.org) API, German keywords |
-| OpenMoji + Unicode CLDR `de` annotations | Emoji art; German names for matching | CC BY-SA 4.0 / Unicode licence | Yes | [openmoji.org](https://openmoji.org), unicode-org/cldr `common/annotations/de.xml` |
-| Köper & Schulte im Walde (2016) norms | Concreteness and imageability pre-filter | CC BY-NC-SA 4.0 | Personal profile only, as `is_concrete` (D26) | [IMS Stuttgart](https://www.ims.uni-stuttgart.de/en/research/resources/experiment-data/affective-norms/) |
 | Tatoeba | Sentences, English translations, native-speaker filter | CC BY 2.0 FR (some CC0) | Yes | [Tatoeba downloads](https://tatoeba.org/en/downloads), updated weekly |
 | Own recordings | Audio gaps | Yours | Yes | `overrides/audio/` |
 
@@ -212,13 +209,11 @@ Fetch rules:
 - Stage 50 · media:
   - Audio: candidates from Kaikki sounds. Prefer the Commons author covering most of the deck; words they lack fall through to the author with the next most coverage, and so on (D24). Regional files only as a last resort, tagged. Own recordings always win.
   - Audio processing: fetch author and licence, then ffmpeg trims silence to 100 ms padding, normalizes to about −16 LUFS, and writes mono MP3 at about 48 kbps.
-  - Images: nouns only, above the concreteness and imageability thresholds (tuned in Phase 1). Candidates from ARASAAC (German keyword search) and OpenMoji (CLDR German names and keywords).
-  - Only approved images ship: ARASAAC as 256 px WebP via vips, OpenMoji as SVG.
 - Stage 60 · sentences:
   - Candidates: Tatoeba sentences with English translations, plus Wiktionary examples.
   - Match any inflected form; for separable verbs, stem and particle must both appear, particle later.
   - Keep 4–10 tokens, prefer native authors (Tatoeba level 5), skip sentences tagged as needing review. Store the top 5 per word.
-- Stage 70 · bundle: write the deck bundle. `--profile personal|public`; `personal` (the development build) uses the whole data set; `public` drops NC/ND items (ARASAAC, NC-licensed audio) and keeps `is_concrete` only from human image decisions (D26).
+- Stage 70 · bundle: write the deck bundle. `--profile personal|public`; `personal` (the development build) uses the whole data set; `public` drops NC/ND items such as NC-licensed audio (D26, D46).
 
 Stable ids are `lemma#pos#n`, with n the etymology number (default 1): `Bank#noun#1` (Bänke) vs `Bank#noun#2` (Banken), `sein#verb#1` vs `sein#det#1`. Pins live in `overrides/words.toml`, and an id is never reused for another meaning.
 
@@ -252,28 +247,26 @@ data/dist/deck/<version>/
 ├─ attribution.json   # every source and every media item / sentence credit
 ├─ coverage.md        # human-readable report
 └─ media/
-   ├─ audio/<sha1>.mp3
-   └─ img/<sha1>.webp | <sha1>.svg
+   └─ audio/<sha1>.mp3
 ```
 
 SQLite tables:
 
 | Table | Columns |
 | --- | --- |
-| `word` | `id` PK, `rank`, `lemma`, `pos`, `gender`, `article`, `token_share`, `coverage_cum`, `ipa`, `syllables`, `stress_syllable`, `cognate_en`, `flags` JSON, `key_forms` JSON, `tables` JSON, `gloss_en` JSON, `gloss_de` JSON, `audio_id`, `image_id`, `emoji`, `is_concrete` |
+| `word` | `id` PK, `rank`, `lemma`, `pos`, `gender`, `article`, `token_share`, `coverage_cum`, `ipa`, `syllables`, `stress_syllable`, `cognate_en`, `flags` JSON, `key_forms` JSON, `tables` JSON, `gloss_en` JSON, `gloss_de` JSON, `audio_id` |
 | `sentence` | `id` PK, `word_id`, `de`, `en`, `source`, `source_ref`, `author`, `license`, `deck_token_ids` JSON, `out_of_deck`, `hl_start`, `hl_end`, `score` |
-| `media` | `id` PK, `kind`, `path`, `source`, `source_url`, `author`, `license`, `license_url`, `sha256`, `duration_ms`, `width`, `height` |
+| `media` | `id` PK, `kind`, `path`, `source`, `source_url`, `author`, `license`, `license_url`, `sha256`, `duration_ms` |
 | `source` | `id` PK, `name`, `url`, `license`, `retrieved_at`, `sha256` |
 
 `words.json` holds one object per word, with up to 5 sentences and media paths inlined.
 
-The pipeline also writes `data/work/curation.sqlite`: all audio, image and sentence candidates, the current picks, and QA issues. The curation tool reads it and writes overrides.
+The pipeline also writes `data/work/curation.sqlite`: all audio and sentence candidates, the current picks, and QA issues. The curation tool reads it and writes overrides.
 
 Overrides are committed and re-applied on every build; an override that no longer matches anything fails the build.
 
 - `words.toml`: include/exclude, pinned ids, merges and splits, hidden or reordered senses, manual gloss fixes (provenance `manual`).
 - `closed_classes.toml`: prepositions (case, contractions), conjunctions (type), article and pronoun tables.
-- `images.toml`: approved and rejected candidates per word.
 - `sentences.toml`: pinned and banned sentences.
 - `audio/`: own recordings, named by word id with `#` replaced by `_` (`Hand_noun_1.flac`).
 
@@ -311,8 +304,8 @@ Bereit (every card starts here; all status fields dashed, buttons disabled):
 │                                │
 │                                │
 ├────────────────────────────────┤
-│ [Audio]   [Formen]  [Satz]     │
-│ [Bild]    [Verwandt]           │
+│ [Audio]         [Formen]       │
+│ [Satz]          [Verwandt]     │
 ╰────────────────────────────────╯
 ╭─ Punkte: -- ───────────────────╮
 │ [Weiß ich nicht]  [Weiß ich]   │
@@ -345,8 +338,8 @@ Läuft (word revealed, clock running; here Satz was picked, so its sentence has 
 │                                │
 │                                │
 ├────────────────────────────────┤
-│ [Audio]   [Formen]  [Satz]     │
-│ [Bild]    [Verwandt]           │
+│ [Audio]         [Formen]       │
+│ [Satz]          [Verwandt]     │
 ╰────────────────────────────────╯
 ╭─ Punkte: 70 ───────────────────╮
 │ [Weiß ich nicht]  [Weiß ich]   │
@@ -367,8 +360,8 @@ Beantwortet after Weiß ich (score frozen, hints free, undo offered; the meaning
 │ Gib mir deine Hand.            │
 │                                │
 ├────────────────────────────────┤
-│ [Audio]   [Formen]  [Satz]     │
-│ [Bild]    [Verwandt]           │
+│ [Audio]         [Formen]       │
+│ [Satz]          [Verwandt]     │
 ╰────────────────────────────────╯
 ╭─ Punkte: 70 ───────────────────╮
 │ [war doch falsch]  [Weiter]    │
@@ -380,7 +373,6 @@ Beantwortet after Weiß ich (score frozen, hints free, undo offered; the meaning
 | Audio | ♪ eighth note | U+266A |
 | Formen | ▦ square with crosshatch (a table) | U+25A6 |
 | Satz | ¶ pilcrow | U+00B6 |
-| Bild | ▣ square containing a square (a framed picture) | U+25A3 |
 | Verwandt | ⚯ two linked circles (a link) | U+26AF |
 | Optionen | ⛭ gear without hub | U+26ED |
 | Thema | ⏾ moon in Mocha, ☼ sun in Latte (the current mode), from Noto Sans Symbols 2 | U+23FE, U+263C |
@@ -415,7 +407,6 @@ The clock pauses while the page is hidden (`visibilitychange`) and resumes when 
 | Audio, first play before answering | −10 |
 | Formen | −15 |
 | Satz | −20 |
-| Bild | −50 |
 | Verwandt (cognate) | −30 |
 | Any hint after answering | Free |
 | Weiß ich nicht | Score 0, FSRS Again |
@@ -506,14 +497,14 @@ Haptics: one short vibration on Weiß ich and a double one on Weiß ich nicht, w
 `nix run .#curate` opens a ratatui TUI that turns pipeline candidates into committed overrides.
 
 - Reads `data/work/curation.sqlite`; writes `overrides/*.toml` and `overrides/audio/`.
-- Views: issue queue (blocking first), word detail, image picker (ratatui-image with kitty, sixel and halfblock fallback), sentence picker, audio player and recorder.
+- Views: issue queue (blocking first), word detail, sentence picker, audio player and recorder.
 - Recording: `record_cmd` and `play_cmd` in `curate/curate.toml`. Defaults are ffmpeg capture via PipeWire/PulseAudio and ffplay for playback; files land in `overrides/audio/`.
 - Keys: j/k move, Enter open, a accept, x reject, n/p next/previous candidate, Space play, r record, / search, q quit.
 
 | Severity | Checks |
 | --- | --- |
 | Blocking | Noun without gender or plural; verb without Partizip II or auxiliary; no English gloss; any item without licence or author |
-| Warning | No audio; no sentence; concrete noun with an unapproved image; syllable/stress mismatch; audio duration outlier; orphaned override |
+| Warning | No audio; no sentence; syllable/stress mismatch; audio duration outlier; orphaned override |
 
 ## APK
 
@@ -526,7 +517,7 @@ Nix builds the APK and signs it with this machine's debug key; it is installed b
 
 ## Licensing and attribution
 
-Personal builds use the whole data set, NC sources included (ARASAAC, Köper-derived `is_concrete`, D26); public builds drop every NC/ND item and are released under CC BY-SA 4.0.
+Personal builds use the whole data set, NC items included (D26); public builds drop every NC/ND item and are released under CC BY-SA 4.0.
 
 - Info lists every source and every per-item credit from `attribution.json`.
 - DeReWo never enters the repo, the bundle, or any derived file that ships.
@@ -560,7 +551,7 @@ Phase 0 unlocks both spikes, and Phase 3 starts only after the coverage report a
   - Done when two builds from the same snapshot are byte-identical; every media item and sentence has source, author and licence; pytest passes the tricky-word fixtures; the coverage targets set in Phase 1 are met.
 - Phase 4 · Curation and QA
   - Curation tool with issue queue, pickers and recorder; automated checks; build-to-build diff report.
-  - Done when the top 500 words have no blocking issues and every concrete noun's image is approved or rejected.
+  - Done when the top 500 words have no blocking issues (D46).
 - Phase 5 · Core study loop
   - Engine: score state machine, grade bands, queue, ts-fsrs adapter, 04:00 rollover. Storage; deck loader (D41).
   - Full card flow including Intro, Kenne ich schon, undo, dynamic sentence choice, EN/DE toggle, pause while hidden, haptics.
@@ -607,7 +598,7 @@ These assumptions need real data before Phase 3; record each answer in `docs/sou
 - [x] Is FrequencyWords case-folded? Does the Leipzig word list keep case? Which Leipzig corpora (news/web, year) to use.
 - [x] Exact Kaikki field paths for forms, tags, sounds, hyphenation and examples in both editions.
 - [x] Audio coverage for the top 2,000, the speaker distribution, and which Lingua Libre speaker to prefer (D24).
-- [ ] Concreteness thresholds: you label 100 nouns tangible or abstract in a CSV, and the thresholds come from that sample.
+- [x] Concreteness thresholds: dropped with the pictures (D46).
 - [x] ARASAAC API endpoints, rate limits and match rate; OpenMoji/CLDR match rate.
 - [x] Licences of UD GSD and HDT, and the terms of the Köper norms (D26).
 - [x] Separable-verb correction: anfangen, aufhören, ankommen and anrufen land at plausible ranks (DeReWo cross-check, D25).
@@ -626,5 +617,4 @@ None of these get built until you ask for them.
 - Personal notes and mnemonics per word.
 - Swipe gestures for the answer buttons.
 - Automated Syncthing sync.
-- Commons photos via Wikidata if pictogram coverage falls short.
 - A setting to hide vulgar words.

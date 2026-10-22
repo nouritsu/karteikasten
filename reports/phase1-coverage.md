@@ -5,7 +5,9 @@ Throwaway deck: `data/dist/deck/2026.10.06-bdc9ce1-spike/` (top 100 plus *Hand* 
 
 **Decided 2026-10-06:** amendments D23–D26 accepted (D24 and D26 with your refinements), recorded in `docs/SPEC.md`.
 
-**Still needs you:** label the 100 nouns in `reports/concreteness-labels.csv`, confirm the coverage targets in the last section, and make the curation calls under "Anomalies" (or leave them for the curation tool).
+**Still needs you:** confirm the coverage targets in the last section, and make the curation calls under "Anomalies" (or leave them for the curation tool).
+
+**2026-10-15:** pictures are gone (D46), and with them the concreteness labels. The image findings below stay as a record.
 
 ## Summary
 
@@ -27,9 +29,7 @@ Top 40: der (article), sein (verb), ich, ein (article), und, haben, in, nicht, e
   - One Commons author, **Jeuwre, has recordings for 98.75%** (1,975) of the top 2,000, hence D24.
   - Under D24 the other 22 words fall through to 7 authors, next by coverage. The spike deck now has one voice for 101 of its 102 words (*ja* is by MiER).
   - No candidate audio is NC or ND.
-- [ ] **Concreteness thresholds:** waiting for your labels.
-  - 100 nouns in `reports/concreteness-labels.csv`, ten from each concreteness band. Put `t` (tangible) or `a` (abstract) in the `label` column.
-  - The norms' scores are left out on purpose, so they don't bias your labels.
+- [x] **Concreteness thresholds:** dropped with the pictures (D46).
 - [x] **ARASAAC endpoints, rate limits, match rate; OpenMoji/CLDR match rate:**
   - Endpoints are in `docs/sources/arasaac.md`. A single `GET /v1/pictograms/all/de` replaces about a thousand searches. No rate limit is published, so the client allows at most 2 requests per second.
   - Of the 791 nouns in the top 2,000, ARASAAC matches 476 (60%), OpenMoji/CLDR 309 (39%) and either one 535 (68%), before the concreteness filter and approval.
@@ -139,4 +139,3 @@ Word types in the top 2,000: 791 nouns, 560 verbs, 297 adjectives, 192 adverbs, 
 | Stress highlight | ≥ 93% (spec rule) |
 | 5 sentences | ≥ 99% |
 | Cognate hint | no coverage target; 0 wrong hints after the exceptions list |
-| Image | every concrete noun approved or rejected (Phase 4 gate) |
