@@ -73,7 +73,7 @@ export const de = {
     strong: 'stark',
     weak: 'schwach',
     mixed: 'gemischt',
-    preteritePresent: 'Präteritopräsens',
+    modal: 'Modalverb',
     comparison: 'Steigerung',
     attributive: 'attributiv',
     predicativeOnly: 'nur prädikativ',

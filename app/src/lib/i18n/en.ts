@@ -73,7 +73,7 @@ export const en: Strings = {
     strong: 'strong',
     weak: 'weak',
     mixed: 'mixed',
-    preteritePresent: 'preterite-present',
+    modal: 'modal verb',
     comparison: 'comparison',
     attributive: 'attributive',
     predicativeOnly: 'predicative only',

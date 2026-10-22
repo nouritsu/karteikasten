@@ -42,7 +42,7 @@ export function keyFormLines(word: DeckWord, t: Strings): string[] {
         flags.has('strong') && f.strong,
         flags.has('weak') && f.weak,
         flags.has('mixed') && f.mixed,
-        flags.has('preterite_present') && f.preteritePresent,
+        flags.has('modal') && f.modal,
       ].filter((kind): kind is string => Boolean(kind))
       if (past.length || kinds.length) lines.push([...past, ...kinds].join(' · '))
       break
