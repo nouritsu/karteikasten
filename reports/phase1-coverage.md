@@ -5,9 +5,11 @@ Throwaway deck: `data/dist/deck/2026.10.06-bdc9ce1-spike/` (top 100 plus *Hand* 
 
 **Decided 2026-10-06:** amendments D23–D26 accepted (D24 and D26 with your refinements), recorded in `docs/SPEC.md`.
 
-**Still needs you:** confirm the coverage targets in the last section, and make the curation calls under "Anomalies" (or leave them for the curation tool).
+**Still needs you:** the curation calls under "Anomalies" (or leave them for the curation tool).
 
 **2026-10-15:** pictures are gone (D46), and with them the concreteness labels. The image findings below stay as a record.
+
+**Decided 2026-10-22:** the coverage targets in the last section are confirmed as proposed.
 
 ## Summary
 
@@ -31,7 +33,7 @@ Top 40: der (article), sein (verb), ich, ein (article), und, haben, in, nicht, e
   - No candidate audio is NC or ND.
 - [x] **Concreteness thresholds:** dropped with the pictures (D46).
 - [x] **ARASAAC endpoints, rate limits, match rate; OpenMoji/CLDR match rate:**
-  - Endpoints are in `docs/sources/arasaac.md`. A single `GET /v1/pictograms/all/de` replaces about a thousand searches. No rate limit is published, so the client allows at most 2 requests per second.
+  - Endpoints were in `docs/sources/arasaac.md`, removed with D46 (still in git history). A single `GET /v1/pictograms/all/de` replaces about a thousand searches. No rate limit is published, so the client allows at most 2 requests per second.
   - Of the 791 nouns in the top 2,000, ARASAAC matches 476 (60%), OpenMoji/CLDR 309 (39%) and either one 535 (68%), before the concreteness filter and approval.
 - [x] **Licences of UD GSD and HDT, and the terms of the Köper norms:**
   - GSD: CC BY-SA 4.0.
@@ -45,7 +47,7 @@ Top 40: der (article), sein (verb), ich, ein (article), und, haben, in, nicht, e
   - Files and URLs are in `docs/sources/tatoeba.md`.
   - 613,268 of 782,626 German sentences (78%) are by native (level 5) authors.
   - Review tags: `@needs native check`, `@check`, `@change`, `@delete`, `unnatural`, `wrong grammar` and variants (359 sentences carry one).
-- [x] **Coverage targets per field for Phase 3:** proposed in the last section, for you to confirm.
+- [x] **Coverage targets per field for Phase 3:** confirmed on 2026-10-22; see the last section.
 
 ## Coverage per field
 
@@ -126,7 +128,9 @@ Word types in the top 2,000: 791 nouns, 560 verbs, 297 adjectives, 192 adverbs, 
   - `is_concrete` in the shipped deck is derived from CC BY-NC-SA data.
   - Proposal: the public profile ships `is_concrete` only where a human approved or rejected an image. The norms stay a build-time pre-filter for candidates, which never ship.
 
-## Proposed coverage targets for Phase 3 (top 2,000, after curation)
+## Coverage targets for Phase 3 (top 2,000, after curation)
+
+Proposed with this report and confirmed on 2026-10-22.
 
 | Field | Target |
 | --- | --- |

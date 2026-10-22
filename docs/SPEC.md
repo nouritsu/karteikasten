@@ -10,7 +10,7 @@ Build Karteikasten phase by phase (see Phases), stop at each phase's acceptance 
 - Hard rule: no language model generates linguistic content. That means no glosses, forms, translations, sentences, pronunciations, images or audio. Missing data stays missing and shows up in the coverage report.
 - Human corrections go through `overrides/` and carry provenance `manual`.
 - Every datum carries provenance. Every media file and sentence carries source, author and licence.
-- Environment: NixOS, flake-parts with the dendritic pattern, direnv (`use flake`), comma for one-off tools. Never install anything globally.
+- Environment: NixOS, a plain flake with a devenv dev shell (D47), direnv (`use flake . --no-pure-eval`), comma for one-off tools. Never install anything globally.
 - Shell is fish. Write glue scripts in fish or Python, never bash-only syntax. Use `rg` and `fd` in docs and examples; coreutils are uutils.
 - Be polite to every upstream: descriptive User-Agent with contact, rate limits, caching, retries with backoff.
 - Never commit `data/` or any DeReWo file.
@@ -23,7 +23,7 @@ Karteikasten is a phone-only Android app (D40) that teaches the top n German wor
 - Per word: type, gender, IPA with syllables and stress, audio, key forms and full tables, meaning (English and German, toggle), example sentences, English cognate hint. No pictures (D46).
 - Look: monospace text, box borders with inset titles, Unicode symbol icons (D27). It is rendered in HTML/CSS, not a terminal grid, so the word can be large.
 - Learning: two buttons (Weiß ich / Weiß ich nicht), a decaying score with hint penalties, and the score mapped to an FSRS-6 grade.
-- Scope: personal use now, data kept release-ready. The desktop only runs the data pipeline and the curation tool.
+- Scope: personal use now, data kept release-ready. The desktop runs the data pipeline and the curation tool and builds the APK (D42).
 - "Karteikasten" is a working title; rename freely.
 
 ## Decision log (frozen)
@@ -57,7 +57,7 @@ All 22 decisions are final; D19 was not answered, so it takes the recommended de
 
 ### Amendments
 
-D23–D26 were accepted after Phase 1 on 2026-10-06 (evidence in `reports/phase1-coverage.md`); D27–D39 come from your Phase 2 review on 2026-10-07; D40–D45 from your request for an APK the same day; D46 from your request on 2026-10-15. The sections below are amended where they apply and marked with the decision's id.
+D23–D26 were accepted after Phase 1 on 2026-10-06 (evidence in `reports/phase1-coverage.md`); D27–D39 come from your Phase 2 review on 2026-10-07; D40–D45 from your request for an APK the same day; D46 from your request on 2026-10-15; D47 records your Nix choices, the plain flake and alejandra from Phase 0 on 2026-10-06 and the devenv shell from 2026-10-19. The sections below are amended where they apply and marked with the decision's id.
 
 | ID | Topic | Decision |
 | --- | --- | --- |
@@ -85,6 +85,7 @@ D23–D26 were accepted after Phase 1 on 2026-10-06 (evidence in `reports/phase1
 | D44 | Application id | `com.nouritsu.karteikasten`. It never changes: another id is another app, with empty progress. |
 | D45 | APK versions | versionName is the app version plus the deck version (`0.1.0+2026.10.06-bdc9ce1`); versionCode is the commit count, so a new deck without a new commit needs `--version-code`. |
 | D46 | No pictures | The Bild hint and its sheet go: a picture gives the answer away, and approving images noun by noun was manual work for little gain. With them go ARASAAC, OpenMoji with the CLDR annotations, the Köper norms, `is_concrete`, `emoji`, `overrides/images.toml` and the concreteness labels. The four hint buttons that remain sit two to a row. Replaces D11; amends D31; the profiles of D26 stay, without `is_concrete`. |
+| D47 | Nix layout | A plain flake replaces flake-parts with the dendritic pattern and import-tree: each package is a `callPackage` file under `nix/`, and `flake.nix` wires the apps, dev shell, checks and formatter itself. alejandra, run by treefmt as `nix fmt`, replaces nixfmt. The dev shell is devenv in flake mode with the house style from `nouritsu/conf-nixos`, so direnv and `nix flake check` need `--no-pure-eval`. The flake targets x86_64-linux only, where androidenv's SDK tools run. |
 
 ## Implementation defaults
 
@@ -99,13 +100,13 @@ These choices fill gaps the decisions leave open; change any of them without a n
 - Audio plays once automatically after answering (setting, on by default).
 - Vulgar words stay in the deck, tagged from Wiktionary labels.
 - APK: Gradle and the Android SDK from nixpkgs, Maven dependencies pinned in `nix/apk-deps.json` (D42).
-- Tooling: `nixfmt`, `pytest`, `cargo test` + `clippy`, Python 3.12 or newer.
+- Tooling: alejandra via `nix fmt` (D47), `pytest`, `cargo test` + `clippy`, Python 3.12 or newer.
 
 ## Architecture and Nix
 
 The desktop pipeline builds a versioned deck bundle, Nix packs it with the app into an APK (D41), and the phone keeps all progress locally as an append-only review log.
 
-&#91;embedded content: system overview · desktop, Pi, phone\]
+&#91;embedded content: system overview · desktop, phone (the Pi went with D41)\]
 
 Data moves left to right on the desktop and into the phone with each APK; progress only leaves the phone as an export file.
 
@@ -118,14 +119,17 @@ Repo layout:
 
 ```
 karteikasten/
-├─ flake.nix              # flake-parts.lib.mkFlake { inherit inputs; } (import-tree ./nix)
+├─ flake.nix              # inputs, apps, dev shell, checks, formatter (D47)
 ├─ flake.lock
-├─ .envrc                 # use flake
-├─ nix/                   # dendritic: every file is a flake-parts module
-│  ├─ devshell.nix
-│  ├─ pipeline.nix        # apps: fetch, build, report
+├─ .envrc                 # use flake . --no-pure-eval
+├─ nix/                   # one callPackage file per package (D47)
+│  ├─ pipeline.nix        # packages.pipeline, wrapped as apps fetch, build, report
 │  ├─ app.nix             # packages.app (static web build)
+│  ├─ app-assets.nix      # packages.app-assets (font subsets, icons)
 │  ├─ apk.nix             # packages.apk (Capacitor + Gradle)
+│  ├─ apk-app.nix         # nix run .#apk (bundle a deck, sign, install)
+│  ├─ apk-deps.json       # Gradle dependency lockfile
+│  ├─ stub-deck/          # empty deck for checks.apk
 │  ├─ curate.nix          # packages.curate (ratatui tool)
 ├─ config/pipeline.toml   # n_max, blend weight, profile
 ├─ sources.lock.json      # url, retrieved_at, bytes, sha256 per raw file
@@ -149,12 +153,13 @@ karteikasten/
    └─ dist/deck/<version>/
 ```
 
-Nix modules:
+Nix files (D47):
 
-- `devshell.nix`: `python3.withPackages` (duckdb, httpx, pytest, a CoNLL-U reader or a small parser), `duckdb` CLI, `sqlite`, `ffmpeg`, Node.js LTS, Rust toolchain (cargo, rustc, clippy, rustfmt, rust-analyzer).
-- `pipeline.nix`: fish wrappers via `pkgs.writers.writeFishBin` around the Python CLI, exposed as `nix run .#fetch`, `.#build`, `.#report`.
-- `app.nix`: `packages.app` via `buildNpmPackage`; output is static files.
-- `apk.nix`: `packages.apk`, an unsigned release APK; `nix run .#apk` signs it (D42, D43).
+- `flake.nix`, dev shell: devenv with the `nouritsu/conf-nixos` house style; `python3.withPackages` (duckdb, httpx, pytest, a CoNLL-U reader or a small parser), `duckdb` CLI, `sqlite`, `ffmpeg`, Node.js LTS, qrencode, Rust toolchain (cargo, rustc, clippy, rustfmt, rust-analyzer), Gradle, JDK 21, adb with `ANDROID_HOME`, alejandra.
+- `flake.nix`, the rest: the apps; `checks` (formatting, pytest, svelte-check and Vitest, cargo test and clippy, the APK with the stub deck); `formatter`.
+- `pipeline.nix`: `packages.pipeline`, the Python CLI; `flake.nix` wraps it in fish via `pkgs.writers.writeFishBin` as `nix run .#fetch`, `.#build`, `.#report`.
+- `app.nix`: `packages.app` via `buildNpmPackage`; output is static files. `app-assets.nix` supplies its font subsets and icons.
+- `apk.nix`: `packages.apk`, an unsigned release APK with the stub deck; `apk-app.nix` is `nix run .#apk`, which bundles a real deck and signs it (D42, D43).
 - `curate.nix`: `packages.curate` via `rustPlatform.buildRustPackage`, runnable as `nix run .#curate`.
 
 Flake builds only see git-tracked files, and `data/` is gitignored, so the pipeline runs via `nix run` in the working tree. Determinism comes from `sources.lock.json` and `flake.lock`, not from the Nix sandbox.
@@ -432,6 +437,7 @@ Storage and offline:
 - IndexedDB stores: `events`, `cards` (derived cache), `settings`, `meta`. Call `navigator.storage.persist()` on first run.
 - Deck loading: `/deck/latest.json` → `/deck/<v>/manifest.json` + `words.json`, all inside the APK (D41).
 - New deck version: arrives with an APK update. Progress follows stable ids; orphaned ids keep their history and are listed, never deleted.
+- IndexedDB lives in the app's data: an update with the same id and key keeps it (D43, D44); uninstalling or clearing the app's storage deletes it, so export is the only backup.
 
 Event shape:
 
@@ -490,7 +496,7 @@ The status block carries eleven fields, all dashed during Bereit, under a title 
 | Info | Sources and per-item credits (searchable), deck and app versions, licence notes, the generic adjective-ending table |
 | Feierabend! | Shown when the queue is empty: reviews, average score, new words, streak, coverage change, cards due tomorrow |
 
-Haptics: one short vibration on Weiß ich and a double one on Weiß ich nicht, wherever the Vibration API exists (not on iOS).
+Haptics: one short vibration on Weiß ich and a double one on Weiß ich nicht, through the Vibration API of Android's WebView (D40).
 
 ## Curation tool
 
@@ -535,20 +541,20 @@ Eight phases run in order, Phases 1 and 2 in parallel, and each ends with a shor
 Phase 0 unlocks both spikes, and Phase 3 starts only after the coverage report and the phone test both pass.
 
 - Phase 0 · Foundations
-  - Repo skeleton as in Architecture; `flake.nix` with flake-parts + import-tree; devShell; `.envrc`; `.gitignore` (`data/`, `result*`, `node_modules/`, `target/`).
-  - Stub apps (`fetch`, `build`, `report`) that print TODO; Svelte scaffold; `cargo new curate`; server module stub; `nix flake check` with nixfmt.
-  - Done when `direnv allow` gives python+duckdb, node, cargo, ffmpeg and vips; `nix flake check` passes; `nix build .#app` builds the scaffold.
+  - Repo skeleton as in Architecture; a plain `flake.nix` (D47); devShell; `.envrc`; `.gitignore` (`data/`, `result*`, `node_modules/`, `target/`).
+  - Stub apps (`fetch`, `build`, `report`) that print TODO; Svelte scaffold; `cargo new curate`; server module stub (gone with the Pi, D41); `nix flake check` with alejandra (D47).
+  - Done when `direnv allow` gives python+duckdb, node, cargo and ffmpeg (and vips until D46); `nix flake check` passes; `nix build .#app` builds the scaffold.
 - Phase 1 · Data spike (top 100 words)
   - Fetchers for every source, with `sources.lock.json`; field notes per source in `docs/sources/`.
   - Work through "Verify in Phase 1" and build a throwaway top-100 deck.
   - Done when `reports/phase1-coverage.md` shows coverage per field plus anomalies, and you have confirmed or amended the decisions here.
 - Phase 2 · UI spike (parallel with Phase 1)
-  - Fixture data for 3 words; the four blocks; Bereit with dashed fields; letter shuffle; hint buttons; decaying score; answer view; nav icons; font subset; audio; picture overlay; two themes; installable PWA (manifest + service worker).
-  - Test on the phone over HTTPS, via the Pi module or `tailscale serve` from the desktop.
-  - Done when it installs to the home screen, reloads offline, renders IPA without fallback boxes, and the shuffle and layout feel right to you.
+  - Fixture data for 3 words; the four blocks; Bereit with dashed fields; letter shuffle; hint buttons; decaying score; answer view; nav icons; font subset; audio; two themes. It started as an installable PWA with a picture overlay; the APK replaced the PWA (D40) and the overlay went (D46).
+  - Test on the phone with the APK over adb (`nix run .#apk -- --install`); `app/phone.fish` serves the web build to the phone's browser over the home network for quick looks.
+  - Done when the APK installs, works offline from first launch, renders IPA without fallback boxes, and the shuffle and layout feel right to you (D40). Passed on 2026-10-22.
 - Phase 3 · Full pipeline (n = 2,000)
   - Stages 20–70 as specified, with `--profile personal|public`.
-  - Done when two builds from the same snapshot are byte-identical; every media item and sentence has source, author and licence; pytest passes the tricky-word fixtures; the coverage targets set in Phase 1 are met.
+  - Done when two builds from the same snapshot are byte-identical; every media item and sentence has source, author and licence; pytest passes the tricky-word fixtures; the coverage targets set in Phase 1 are met (confirmed 2026-10-22, last section of `reports/phase1-coverage.md`).
 - Phase 4 · Curation and QA
   - Curation tool with issue queue, pickers and recorder; automated checks; build-to-build diff report.
   - Done when the top 500 words have no blocking issues (D46).
@@ -603,7 +609,7 @@ These assumptions need real data before Phase 3; record each answer in `docs/sou
 - [x] Licences of UD GSD and HDT, and the terms of the Köper norms (D26).
 - [x] Separable-verb correction: anfangen, aufhören, ankommen and anrufen land at plausible ranks (DeReWo cross-check, D25).
 - [x] Tatoeba file names and URLs, native-speaker yield, and the names of review tags.
-- [ ] Coverage targets per field for Phase 3.
+- [x] Coverage targets per field for Phase 3: confirmed on 2026-10-22.
 
 ## Backlog (not now)
 
