@@ -241,6 +241,16 @@ def run(
             raise BuildError(f"--offline: {error}") from error
         by_author = media.author_coverage(candidates, infos, profile)
         picks = {id_: media.pick_audio(cands, infos, by_author, profile) for id_, cands in candidates.items()}
+        for id_, file in sorted(words_over.audio.items()):
+            if id_ not in candidates:
+                raise BuildError(f"words.toml [audio] names a word outside the deck: {id_}")
+            pinned = next((c for c in candidates[id_] if c.file == file), None)
+            if pinned is None:
+                raise BuildError(f"words.toml [audio] {id_}: {file} is not one of its recordings")
+            if not media.usable(infos.get(file), profile):
+                raise BuildError(f"words.toml [audio] {id_}: {file} has no author or licence on Commons"
+                                 + (", or is NC/ND" if profile == "public" else ""))
+            picks[id_] = pinned
         for done, r in enumerate(top, start=1):
             if r.id in recordings:
                 source = recordings[r.id]
@@ -361,7 +371,11 @@ def run(
         words.append(record)
 
     entries = lock.load(paths.lock)  # stage 50 may have added Commons snapshots
-    used = {p: e for p, e in sorted(entries.items()) if not p.startswith(PRIVATE)}
+    # Recordings the deck does not use (fetched to listen to in the curation tool) are
+    # not inputs: hearing a candidate must not change the deck version.
+    picked = {f"commons/audio/{p.file}" for id_, p in picks.items() if p is not None and id_ not in recordings}
+    used = {p: e for p, e in sorted(entries.items())
+            if not p.startswith(PRIVATE) and (not p.startswith("commons/audio/") or p in picked)}
     inputs = {
         "raw": caching.digest({p: e.sha256 for p, e in used.items()}),
         "overrides": caching.files(p for p in paths.overrides.rglob("*") if p.is_file()),
@@ -419,7 +433,8 @@ def run(
     (paths.dist / "deck" / "latest.json").write_text(json.dumps({"version": version}) + "\n", encoding="utf-8")
 
     audio_rows = {
-        id_: [{"file": c.file, "author": media.metadata(infos[c.file], "Artist") if c.file in infos else None,
+        id_: [{"file": c.file, "url": infos[c.file].get("url") if c.file in infos else None,
+               "author": media.metadata(infos[c.file], "Artist") if c.file in infos else None,
                "license": media.metadata(infos[c.file], "LicenseShortName") if c.file in infos else None,
                "region": c.region, "usable": media.usable(infos.get(c.file), profile),
                "picked": picks[id_] is not None and picks[id_].file == c.file} for c in cands]
@@ -431,7 +446,7 @@ def run(
               for c in {c.id: c for c in chosen[id_] + tatoeba_best.get(id_, [])}.values()]
         for id_ in deck_ids
     }
-    curation.write(paths.work / "curation.sqlite", words, audio_rows, sentence_rows, found)
+    curation.write(paths.work / "curation.sqlite", version, words, audio_rows, sentence_rows, found)
     log(f"stage 70: {dest.relative_to(paths.root)} ({len(words):,} words, {len(media_rows):,} audio files, "
         f"{manifest['counts']['sentences']:,} sentences)")
     return dest

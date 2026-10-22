@@ -5,7 +5,8 @@ never silently stops doing its job. Everything here carries provenance `manual`.
 
 - words.toml: [exclude] ids with a reason; [merge] an id into the card of
   another (its frequency and senses join that card); [gloss_en] / [gloss_de]
-  glosses that replace the extracted ones; [no_cognate] cognate hints dropped.
+  glosses that replace the extracted ones; [no_cognate] cognate hints dropped;
+  [audio] the Commons file a word uses instead of the build's pick.
 - closed_classes.toml: [preposition] cases governed (first the main one;
   acc + dat is two-way) and optionally contractions; [conjunction] coordinating
   or subordinating.
@@ -34,6 +35,7 @@ class WordOverrides:
     gloss_en: dict[str, list[str]] = field(default_factory=dict)
     gloss_de: dict[str, list[str]] = field(default_factory=dict)
     no_cognate: dict[str, str] = field(default_factory=dict)  # id -> reason
+    audio: dict[str, str] = field(default_factory=dict)  # id -> Commons file name, one of its candidates
 
 
 @dataclass(frozen=True)
@@ -61,7 +63,7 @@ class Overrides:
         w, c, s = self.words, self.closed, self.sentences
         return (
             set(w.exclude) | set(w.merge) | set(w.merge.values()) | set(w.gloss_en) | set(w.gloss_de)
-            | set(w.no_cognate) | set(c.prepositions) | set(c.contractions) | set(c.conjunctions)
+            | set(w.no_cognate) | set(w.audio) | set(c.prepositions) | set(c.contractions) | set(c.conjunctions)
             | set(s.pin) | set(s.ban) | set(self.recordings)
         )
 
@@ -90,12 +92,17 @@ def load_words(path: Path) -> WordOverrides:
     for absorbed, target in merge.items():
         if target in merge:
             raise OverrideError(f"{path}: [merge] {absorbed!r} joins {target!r}, which itself joins another card")
+    audio = dict(data.get("audio", {}))
+    for id_, file in audio.items():
+        if not isinstance(file, str) or not file:
+            raise OverrideError(f"{path}: [audio] {id_!r} must be a Commons file name")
     return WordOverrides(
         exclude=dict(data.get("exclude", {})),
         merge=merge,
         gloss_en=_strings(path, "gloss_en", data),
         gloss_de=_strings(path, "gloss_de", data),
         no_cognate=dict(data.get("no_cognate", {})),
+        audio=audio,
     )
 
 

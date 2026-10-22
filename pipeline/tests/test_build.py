@@ -278,7 +278,12 @@ def test_overrides_apply(deck, tmp_path):
     _, _, before = deck
     hand = before["Hand#noun#1"]["sentences"]
     assert len(hand) >= 2
-    words_toml = WORDS_TOML + """
+    picked = before["Hand#noun#1"]["audio"]["source_url"].rsplit("File:", 1)[1]
+    other = next(f for f in ("De-Hand.ogg", "De-Hand2.ogg") if f != picked)
+    words_toml = WORDS_TOML + f"""
+[audio]
+"Hand#noun#1" = "{other}"
+
 [merge]
 "okay#adj#1" = "okay#intj#1"
 
@@ -301,6 +306,7 @@ def test_overrides_apply(deck, tmp_path):
     assert words["Hand#noun#1"]["gloss_en"] == [{"text": "hand (by hand)", "tags": []}]
     assert words["Hand#noun#1"]["provenance"]["gloss_en"].startswith("manual")
     assert words["Haus#noun#1"]["cognate_en"] is None
+    assert words["Hand#noun#1"]["audio"]["source_url"].endswith(f"File:{other}")
     ids = [s["id"] for s in words["Hand#noun#1"]["sentences"]]
     assert ids[0] == hand[-1]["id"] and hand[0]["id"] not in ids
 
@@ -311,6 +317,7 @@ def test_overrides_apply(deck, tmp_path):
         (WORDS_TOML + '\n[gloss_en]\n"Nichtwort#noun#1" = ["x"]\n', "", "Nichtwort#noun#1"),
         (WORDS_TOML + '\n[no_cognate]\n"mit#prep#1" = "x"\n', "", "no cognate hint"),
         (WORDS_TOML, '[ban]\n"Hand#noun#1" = ["tatoeba:1"]\n', "not a sentence for this word"),
+        (WORDS_TOML + '\n[audio]\n"Hand#noun#1" = "De-Fuß.ogg"\n', "", "not one of its recordings"),
     ],
 )
 def test_stale_overrides_fail_the_build(tmp_path, words_toml, sentences_toml, message):
@@ -320,6 +327,20 @@ def test_stale_overrides_fail_the_build(tmp_path, words_toml, sentences_toml, me
 
 
 # -- determinism ------------------------------------------------------------------------------
+
+
+def test_recordings_the_deck_does_not_use_leave_its_version_alone(tmp_path):
+    paths = checkout(tmp_path)
+    first = build.run(paths, offline=True, log=quiet).name
+    extra = paths.raw / "commons" / "audio" / "De-Unused.ogg"  # as if fetched to listen to
+    extra.write_bytes(b"not used")
+    entries = lock.load(paths.lock)
+    entries["commons/audio/De-Unused.ogg"] = lock.Entry(
+        source="commons", url="https://example.invalid/De-Unused.ogg", retrieved_at="2030-01-01T00:00:00Z",
+        bytes=extra.stat().st_size, sha256=sha256_of(extra),
+    )
+    lock.save(paths.lock, entries)
+    assert build.run(paths, offline=True, log=quiet).name == first
 
 
 def test_two_builds_are_byte_identical(tmp_path):

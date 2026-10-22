@@ -24,6 +24,8 @@ def test_every_table_is_read(tmp_path):
 "Dr.#noun#1" = ["doctor (title)"]
 [no_cognate]
 "Kraft#noun#1" = "craft misleads"
+[audio]
+"Hand#noun#1" = "De-Hand2.ogg"
 """)
     write(tmp_path, "closed_classes.toml", """
 [preposition]
@@ -41,6 +43,7 @@ def test_every_table_is_read(tmp_path):
     write(tmp_path / "audio", "Dr._noun_1.flac", "")
     loaded = overrides.load(tmp_path)
     assert loaded.words.merge == {"sie#pron#2": "sie#pron#1"}
+    assert loaded.words.audio == {"Hand#noun#1": "De-Hand2.ogg"}
     assert loaded.closed.prepositions["in#prep#1"] == ["acc", "dat"]
     assert loaded.closed.contractions == {"in#prep#1": ["im", "ins"]}
     assert loaded.closed.conjunctions == {"weil#conj#1": "subordinating"}
@@ -64,6 +67,7 @@ def test_recording_names_keep_underscores_in_the_lemma():
         ("closed_classes.toml", '[conjunction]\n"weil#conj#1" = "sub"\n', "not one of"),
         ("words.toml", '[merge]\n"a#x#1" = "b#x#1"\n"b#x#1" = "c#x#1"\n', "itself joins"),
         ("words.toml", '[gloss_en]\n"a#x#1" = "not a list"\n', "list of strings"),
+        ("words.toml", '[audio]\n"a#x#1" = ["De-a.ogg"]\n', "Commons file name"),
         ("words.toml", "[exclude\n", "words.toml"),
     ],
 )

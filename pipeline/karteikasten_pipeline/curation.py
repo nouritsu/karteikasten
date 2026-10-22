@@ -1,8 +1,9 @@
-"""data/work/curation.sqlite: what the curation tool (Phase 4) works from.
+"""data/work/curation.sqlite: what the curation tool (`nix run .#curate`) works from.
 
-Every audio candidate and the best sentence candidates per word, which of them
-the build picked, and QA issues with a severity (spec: Curation tool). The tool
-reads this database and writes overrides/; the next build applies them.
+Every word with its card as the deck has it, every audio candidate and the best
+sentence candidates per word, which of them the build picked, and QA issues with
+a severity (spec: Curation tool). The tool reads this database and writes
+overrides/; the next build applies them. `meta` names the deck it describes.
 """
 
 import json
@@ -13,9 +14,13 @@ from pathlib import Path
 from typing import Any
 
 SCHEMA = """
-CREATE TABLE word (id TEXT PRIMARY KEY, rank INTEGER NOT NULL, lemma TEXT NOT NULL, pos TEXT NOT NULL);
+CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+CREATE TABLE word (
+    id TEXT PRIMARY KEY, rank INTEGER NOT NULL, lemma TEXT NOT NULL, pos TEXT NOT NULL,
+    card TEXT NOT NULL  -- the word's record in words.json, as JSON
+);
 CREATE TABLE audio_candidate (
-    word_id TEXT NOT NULL, file TEXT NOT NULL, author TEXT, license TEXT, region TEXT,
+    word_id TEXT NOT NULL, file TEXT NOT NULL, url TEXT, author TEXT, license TEXT, region TEXT,
     usable INTEGER NOT NULL, picked INTEGER NOT NULL, PRIMARY KEY (word_id, file)
 );
 CREATE TABLE sentence_candidate (
@@ -80,6 +85,7 @@ def duration_outliers(words: Iterable[dict[str, Any]]) -> set[str]:
 
 def write(
     path: Path,
+    deck_version: str,
     words: list[dict[str, Any]],
     audio_candidates: dict[str, list[dict[str, Any]]],
     sentence_candidates: dict[str, list[dict[str, Any]]],
@@ -92,10 +98,16 @@ def write(
     con = sqlite3.connect(tmp)
     try:
         con.executescript(SCHEMA)
-        con.executemany("INSERT INTO word VALUES (?, ?, ?, ?)", [(w["id"], w["rank"], w["lemma"], w["pos"]) for w in words])
+        con.execute("INSERT INTO meta VALUES ('deck_version', ?)", (deck_version,))
         con.executemany(
-            "INSERT INTO audio_candidate VALUES (?, ?, ?, ?, ?, ?, ?)",
-            [(id_, c["file"], c["author"], c["license"], c["region"], int(c["usable"]), int(c["picked"]))
+            "INSERT INTO word VALUES (?, ?, ?, ?, ?)",
+            [(w["id"], w["rank"], w["lemma"], w["pos"], json.dumps(w, ensure_ascii=False, sort_keys=True))
+             for w in words],
+        )
+        con.executemany(
+            "INSERT INTO audio_candidate VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            [(id_, c["file"], c.get("url"), c["author"], c["license"], c["region"], int(c["usable"]),
+              int(c["picked"]))
              for id_, cands in sorted(audio_candidates.items()) for c in cands],
         )
         con.executemany(

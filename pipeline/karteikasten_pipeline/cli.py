@@ -24,6 +24,11 @@ def parser() -> argparse.ArgumentParser:
     fetch_cli = commands.add_parser("fetch", help="snapshot every source into data/raw (stage 10)")
     fetch_cli.add_argument("--refresh", action="store_true", help="download again even if a snapshot exists")
     fetch_cli.add_argument("--only", nargs="+", choices=sorted(BY_ID), metavar="SOURCE", help="limit to these sources")
+    fetch_cli.add_argument(
+        "--commons", nargs="+", metavar="FILE",
+        help="only these Commons audio files (a build fetches the ones it picks; the curation tool uses this to play "
+             "the others)",
+    )
 
     build = commands.add_parser("build", help="build the deck bundle from data/raw (stages 20-70)")
     build.add_argument(
@@ -48,6 +53,20 @@ def main(argv: list[str] | None = None) -> int:
         paths = Paths(find_root(args.root or Path.cwd()))
     except NotInWorkingTree as error:
         cli.error(str(error))
+
+    if args.command == "fetch" and args.commons:
+        from karteikasten_pipeline.fetch import commons
+
+        settings = config.load(paths.config)
+        with Client(settings.contact) as client:
+            infos = commons.info(args.commons, paths.raw, paths.lock, client)
+            for file in args.commons:
+                if file not in infos:
+                    print(f"fetch: Commons has no file {file!r}", file=sys.stderr)
+                    return 1
+                print(fetch.snapshot(client, paths.raw, paths.lock, f"commons/audio/{file}", infos[file]["url"],
+                                     "commons"))
+        return 0
 
     if args.command == "fetch":
         settings = config.load(paths.config)
