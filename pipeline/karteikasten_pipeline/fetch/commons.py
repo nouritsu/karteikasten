@@ -42,16 +42,21 @@ def answers(data: dict) -> dict[str, dict | None]:
     return result
 
 
+class Offline(Exception):
+    """A build without network needs Commons data the snapshot does not have."""
+
+
 def info(
     files: Iterable[str],
     raw: Path,
     lock_path: Path,
-    client: Client,
+    client: Client | None,
     *,
     log: Callable[[str], None] = print,
 ) -> dict[str, dict]:
     """imageinfo per Commons file name (as Wiktionary links it), read from the snapshots,
-    fetching only the titles none of them answers. Files Commons lacks are left out."""
+    fetching only the titles none of them answers. Files Commons lacks are left out.
+    Without a client, titles no snapshot answers raise `Offline`."""
     entries = lock.load(lock_path)
     known: dict[str, dict | None] = {}
     snapshots = sorted((entry.retrieved_at, path) for path, entry in entries.items() if path.startswith("commons/info/"))
@@ -59,6 +64,8 @@ def info(
         known.update(answers(json.loads((raw / relative).read_text(encoding="utf-8"))))
     names = sorted(set(files))
     missing = [name for name in names if f"File:{name}" not in known]
+    if missing and client is None:
+        raise Offline(f"{len(missing)} Commons titles are in no snapshot, e.g. {missing[0]}")
     for start in range(0, len(missing), BATCH):
         titles = missing[start : start + BATCH]
         path = raw / "commons" / "info" / f"{batch_key(titles)}.json"

@@ -18,13 +18,15 @@ def utc_timestamp(when: datetime) -> str:
     return when.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def snapshot(client: Client, raw: Path, lock_path: Path, relative: str, url: str, source: str) -> Path:
+def snapshot(client: Client | None, raw: Path, lock_path: Path, relative: str, url: str, source: str) -> Path:
     """One per-item file (a Commons recording) into data/raw, recorded
     in the lock like any other snapshot; an existing locked file is reused."""
     dest = raw / relative
     entries = lock.load(lock_path)
     if dest.exists() and relative in entries:
         return dest
+    if client is None:
+        raise FileNotFoundError(f"{relative} is not in the snapshot, and there is no network client")
     download = client.download(url, dest)
     entries[relative] = lock.Entry(
         source=source,
