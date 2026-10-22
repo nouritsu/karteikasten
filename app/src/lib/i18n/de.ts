@@ -49,6 +49,12 @@ export const de = {
     undo: 'war doch falsch',
     next: 'Weiter',
   },
+  done: {
+    title: 'Feierabend!',
+    reviews: (n: number) => (n === 1 ? 'Heute 1 Wiederholung.' : `Heute ${n} Wiederholungen.`),
+    nextAt: (time: string) => `Die nächste Karte ist um ${time} fällig.`,
+    tomorrow: 'Morgen geht es weiter.',
+  },
   nav: {
     title: 'Menü',
     options: 'Optionen',
@@ -97,6 +103,19 @@ export const de = {
   },
   cognate: { title: 'Verwandt', english: 'Englisch' },
   credit: { by: 'von', source: 'Quelle' },
+  options: {
+    backup: 'Sicherung',
+    export: 'Exportieren',
+    import: 'Importieren',
+    exported: (where: string) => `Gespeichert: ${where}`,
+    imported: (added: number, total: number) => `${added} von ${total} Einträgen neu übernommen.`,
+    restoreSettings: 'Auch die Einstellungen aus der Sicherung übernehmen?',
+    lastExport: (date: string) => `Letzter Export: ${date}`,
+    neverExported: 'Noch kein Export.',
+    failed: (message: string) => `Fehlgeschlagen: ${message}`,
+    rest: 'Die übrigen Optionen kommen in Phase 6.',
+  },
+  saveFailed: 'Speichern fehlgeschlagen:',
   later: 'Kommt in Phase 6.',
   close: 'Schließen',
 }

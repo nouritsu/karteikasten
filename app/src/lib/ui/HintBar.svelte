@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { DEFAULT_SCORE, type Hint } from '../engine/score'
+  import type { Hint } from '../engine/score'
   import { i18n } from '../i18n/index.svelte'
   import type { Phase } from '../session.svelte'
   import type { DeckWord } from '../types'
@@ -9,8 +9,15 @@
     phase,
     word,
     used,
+    penalties,
     onHint,
-  }: { phase: Phase; word: DeckWord | undefined; used: Hint[]; onHint: (hint: Hint) => boolean } = $props()
+  }: {
+    phase: Phase
+    word: DeckWord | undefined
+    used: Hint[]
+    penalties: Record<Hint, number>
+    onHint: (hint: Hint) => boolean
+  } = $props()
 
   // Unicode symbols drawn by the app font (nix/app-assets.nix keeps them in the subset).
   const ICONS: Record<Hint, string> = {
@@ -52,13 +59,13 @@
       type="button"
       class:used={used.includes(hint)}
       class:flash={flashing.includes(hint)}
-      disabled={phase === 'ready' || phase === 'reveal' || !available(hint)}
+      disabled={phase === 'ready' || phase === 'reveal' || phase === 'done' || !available(hint)}
       onclick={() => press(hint)}
     >
       <!-- Keyed by language: a language switch swaps the label at once; only the
            deduction shuffles. -->
       <span class="icon" aria-hidden="true">{ICONS[hint]}</span>{#key i18n.lang}<ShuffleText
-          text={flashing.includes(hint) ? `-${DEFAULT_SCORE.penalties[hint]}` : i18n.t.hints[hint]}
+          text={flashing.includes(hint) ? `-${penalties[hint]}` : i18n.t.hints[hint]}
         />{/key}
     </button>
   {/each}

@@ -49,6 +49,12 @@ export const en: Strings = {
     undo: 'was wrong after all',
     next: 'Next',
   },
+  done: {
+    title: 'Done for today!',
+    reviews: (n: number) => (n === 1 ? '1 review today.' : `${n} reviews today.`),
+    nextAt: (time: string) => `The next card is due at ${time}.`,
+    tomorrow: 'More tomorrow.',
+  },
   nav: {
     title: 'Menu',
     options: 'Options',
@@ -97,6 +103,19 @@ export const en: Strings = {
   },
   cognate: { title: 'Related', english: 'English' },
   credit: { by: 'by', source: 'Source' },
+  options: {
+    backup: 'Backup',
+    export: 'Export',
+    import: 'Import',
+    exported: (where: string) => `Saved: ${where}`,
+    imported: (added: number, total: number) => `${added} of ${total} entries were new.`,
+    restoreSettings: 'Also take the settings from the backup?',
+    lastExport: (date: string) => `Last export: ${date}`,
+    neverExported: 'No export yet.',
+    failed: (message: string) => `Failed: ${message}`,
+    rest: 'The other options come in Phase 6.',
+  },
+  saveFailed: 'Saving failed:',
   later: 'Coming in Phase 6.',
   close: 'Close',
 }

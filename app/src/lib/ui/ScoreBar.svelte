@@ -5,13 +5,18 @@
   import Block from './Block.svelte'
   import ShuffleText from './ShuffleText.svelte'
 
-  let { session, onAnswer }: { session: Session; onAnswer: (answer: Answer) => void } = $props()
+  let {
+    session,
+    onAnswer,
+    onNext,
+  }: { session: Session; onAnswer: (answer: Answer) => void; onNext: () => void } = $props()
   const t = $derived(i18n.t.score)
-  const waiting = $derived(session.phase === 'ready' || session.phase === 'reveal')
+  // No score before the clock starts, or on Feierabend.
+  const waiting = $derived(['ready', 'reveal', 'done'].includes(session.phase))
   // The score sits in the title and shuffles on every change; the number and the
   // border fade to the colour of its band (the grade "Weiß ich" would give).
   const value = $derived(waiting ? '--' : String(session.score))
-  const tone = $derived(waiting ? '' : `band-${band(session.score)}`)
+  const tone = $derived(waiting ? '' : `band-${band(session.score, session.settings.score)}`)
   const canUndo = $derived(session.phase === 'answered' && session.answer === 'know' && !session.undone)
 </script>
 
@@ -22,7 +27,9 @@
       {#if canUndo}
         <button type="button" onclick={() => session.undo()}>{t.undo}</button>
       {/if}
-      <button type="button" class="primary" onclick={() => session.next()}>{t.next}</button>
+      <button type="button" class="primary" onclick={() => onNext()}>{t.next}</button>
+    {:else if session.phase === 'done'}
+      <!-- Feierabend: nothing to answer -->
     {:else}
       <button type="button" disabled={session.phase !== 'running'} onclick={() => onAnswer('dont_know')}>{t.dontKnow}</button>
       <button type="button" class="primary" disabled={session.phase !== 'running'} onclick={() => onAnswer('know')}>{t.know}</button>

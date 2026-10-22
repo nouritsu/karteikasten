@@ -15,8 +15,8 @@
 
   let { session, onHint }: { session: Session; onHint: (hint: Hint) => boolean } = $props()
 
-  type Face = { phase: Phase; word: DeckWord | undefined }
-  const current = (): Face => ({ phase: session.phase, word: session.word })
+  type Face = { phase: Phase; word: DeckWord | undefined; sentence: Sentence | undefined }
+  const current = (): Face => ({ phase: session.phase, word: session.word, sentence: session.sentence })
 
   // What the face shows. It follows the session, except that answering and Weiter
   // turn the card over first (D38): the old front stays until the back covers it.
@@ -39,9 +39,8 @@
   const colour = $derived(word && genderClass(word) ? `g-${genderClass(word)}` : '')
   let settled = $state(false) // IPA and syllables fade in once the shuffle is done
 
-  // The sentence the card shows: the deck stores up to five, best first. (Phase 5
-  // picks the one with the most words the learner already knows.)
-  const sentence = $derived<Sentence | undefined>(word?.sentences[0])
+  // Of the word's sentences, the one with the most words the learner knows (D12).
+  const sentence = $derived(face.sentence)
   // The meaning follows the UI language: English glosses, or German definitions.
   const glosses = $derived(word ? (i18n.lang === 'en' ? word.gloss_en : word.gloss_de) : [])
   const showSentence = $derived(answered || session.hints.includes('sentence'))
@@ -54,6 +53,14 @@
 
   $effect(() => {
     if (face.phase === 'ready') settled = false
+  })
+
+  // Feierabend: today's reviews, and when the next learning card is due, if today.
+  const doneLines = $derived.by(() => {
+    if (face.phase !== 'done') return []
+    const next = session.counts.nextDue
+    const time = next && new Intl.DateTimeFormat(i18n.lang, { hour: '2-digit', minute: '2-digit' }).format(next)
+    return [t.done.reviews(session.today), time ? t.done.nextAt(time) : t.done.tomorrow]
   })
 
   $effect(() => {
@@ -120,6 +127,11 @@
       {#if face.phase === 'ready'}
         <!-- The whole face is the button, so Bereit! is easy to hit. -->
         <button type="button" class="ready" onclick={() => session.start()}>{t.card.ready}</button>
+      {:else if face.phase === 'done'}
+        <div class="done">
+          <p class="done-title">{t.done.title}</p>
+          {#each doneLines as line (line)}<p>{line}</p>{/each}
+        </div>
       {:else}
         <div class="center">
           {#if word}
@@ -183,7 +195,13 @@
     <div class="scan" class:scanning></div>
   </div>
   <hr />
-  <HintBar phase={session.phase} word={session.word} used={session.hints} {onHint} />
+  <HintBar
+    phase={session.phase}
+    word={session.word}
+    used={session.hints}
+    penalties={session.settings.score.penalties}
+    {onHint}
+  />
 </Block>
 
 <style>
@@ -239,6 +257,22 @@
   .answered .below {
     align-self: stretch;
     margin-bottom: auto;
+  }
+
+  .done {
+    grid-row: 1 / -1;
+    grid-column: 1;
+    align-self: center;
+    text-align: center;
+  }
+
+  .done p {
+    margin: 0.2em 0;
+  }
+
+  .done-title {
+    font-size: 2.5em;
+    color: var(--accent);
   }
 
   .ready {

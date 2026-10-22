@@ -17,12 +17,16 @@
     return dashed ? dash(text) : text
   }
 
-  const today = $derived(String(session.reviews.length).padStart(2, ' '))
-  const total = $derived(String(session.reviews.length).padStart(3, ' '))
-  const rank = $derived(`#${String(word?.rank ?? 0).padStart(3, ' ')}`)
-  const pos = $derived(word ? (i18n.t.pos[word.pos] ?? word.pos) : '')
+  const today = $derived(String(session.today).padStart(2, ' '))
+  const total = $derived(String(session.total).padStart(3, ' '))
+  // Feierabend has no word: its fields stay dashed.
+  const rank = $derived(word ? `#${String(word.rank).padStart(3, ' ')}` : '#---')
+  const pos = $derived(word ? (i18n.t.pos[word.pos] ?? word.pos) : '-----')
   const article = $derived(word?.pos === 'noun' ? (word.article ?? '') : '')
-  const due = $derived(String(session.words.length - session.index).padStart(2, ' '))
+  const counts = $derived(session.counts)
+  const due = $derived(String(counts.due).padStart(2, ' '))
+  const fresh = $derived(String(counts.fresh).padStart(2, ' '))
+  const streak = $derived(String(session.streak).padStart(2, ' '))
   const coverage = $derived(Math.round(session.coverage * 100))
   const bar = $derived('#'.repeat(Math.round(coverage / (100 / 12))).padEnd(12, '.'))
   const elapsed = $derived(Math.max(0, Math.floor((session.now - session.startedAt) / 1000)))
@@ -42,8 +46,9 @@
     {#if article}· <span class={dashed ? '' : `g-${genderClass(word!)}`}>{show(article)}</span>{/if}
   </p>
   <p>{t.today} {show(today)} · {t.total} {show(total)}</p>
-  <p>{t.due} {show(due)} · {t.new} {show(' 0')} · {t.streak} {show(' 1')}</p>
-  <p>{t.coverage} [{show(bar)}] {show(String(coverage).padStart(2, ' '))}%</p>
+  <p>{t.due} {show(due)} · {t.new} {show(fresh)} · {t.streak} {show(streak)}</p>
+  <!-- The bar's # fill dashes too: show() keeps # only for Rang. -->
+  <p>{t.coverage} [{dashed ? '-'.repeat(bar.length) : bar}] {show(String(coverage).padStart(2, ' '))}%</p>
   <p>{t.session} {show(clock)} · {t.average} {show(average)} {t.points}</p>
 </Block>
 

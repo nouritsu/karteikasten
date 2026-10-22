@@ -8,6 +8,8 @@ describe('card flip', () => {
     expect(flips('ready', 'reveal')).toBe(false)
     expect(flips('reveal', 'running')).toBe(false)
     expect(flips('answered', 'answered')).toBe(false)
+    expect(flips('answered', 'done')).toBe(true)
+    expect(flips('done', 'ready')).toBe(false) // a card coming due on Feierabend just appears
   })
 
   it('mirrors the title', () => {

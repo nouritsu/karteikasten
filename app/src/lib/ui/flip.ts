@@ -13,9 +13,11 @@ export const HOLD_MS = 400 // the back side stays this long
 // (the title's 0.6ch padding plus half a character). Iosevka's ch is half an em.
 export const REACH_CH = 1.1
 
-/** Whether the card turns over between these phases. */
+/** Whether the card turns over between these phases: on answering, and on Weiter
+ *  to the next card or to Feierabend. */
 export function flips(from: Phase, to: Phase): boolean {
-  return (from === 'running' && to === 'answered') || (from === 'answered' && to === 'ready')
+  if (from === 'running') return to === 'answered'
+  return from === 'answered' && (to === 'ready' || to === 'done')
 }
 
 /** The title as seen from the back: Karte → etraK. */

@@ -1,25 +1,29 @@
 <script lang="ts">
   import { onMount, tick } from 'svelte'
   import type { Hint } from './lib/engine/score'
-  import { i18n } from './lib/i18n/index.svelte'
+  import { i18n, type Lang } from './lib/i18n/index.svelte'
   import { Session, type Answer } from './lib/session.svelte'
+  import type { Local } from './lib/store/backup'
+  import { storeSink, Store } from './lib/store/db'
   import { loadDeck } from './lib/store/deck'
-  import { currentTheme, revealTheme, saveTheme, THEMES } from './lib/theme'
+  import { applyTheme, currentTheme, paintStatusBar, revealTheme, saveTheme, THEMES, type Theme } from './lib/theme'
   import type { Deck } from './lib/types'
   import Card from './lib/ui/Card.svelte'
   import FormsView from './lib/ui/FormsView.svelte'
   import NavBar, { type Screen } from './lib/ui/NavBar.svelte'
+  import OptionsView from './lib/ui/OptionsView.svelte'
   import Overlay from './lib/ui/Overlay.svelte'
   import { shuffleChanged, snapshot } from './lib/ui/retext'
   import ScoreBar from './lib/ui/ScoreBar.svelte'
   import StatusBar from './lib/ui/StatusBar.svelte'
 
   type Sheet = 'forms' | Exclude<Screen, 'theme' | 'lang'>
-  const AUTOPLAY = true // "audio after answering" becomes a setting in Phase 6
   const SHEET_DELAY_MS = 400 // a charged hint shows its deduction before its sheet covers it
+  const RECHECK_MS = 5000 // on Feierabend, how often to look for a card that came due
 
-  const session = new Session()
   let deck = $state<Deck | null>(null)
+  let store = $state<Store | null>(null)
+  let session = $state<Session | null>(null)
   let failed = $state(false)
   let theme = $state(currentTheme()) // what the Thema button shows; the page follows
   let switching = false
@@ -31,32 +35,53 @@
     document.documentElement.lang = i18n.lang
   })
 
-  // Ask for every media file once so the service worker keeps it for offline use.
-  function warm(d: Deck) {
-    for (const word of d.words) {
-      if (word.audio) fetch(d.base + word.audio.path).catch(() => {})
+  /** A session over every event in the store; the cache is rewritten from its replay. */
+  async function newSession(d: Deck, s: Store): Promise<Session> {
+    const next = new Session({
+      words: d.words,
+      deckVersion: d.manifest.deck_version,
+      settings: await s.settings(),
+      events: await s.events(),
+      sink: storeSink(s),
+    })
+    void s.putStates(next.states)
+    return next
+  }
+
+  async function start() {
+    const [d, s] = await Promise.all([loadDeck(), Store.open()])
+    await s.settlePending() // an answer left open when the app was closed
+    if (!(await s.meta('persist_asked'))) {
+      // Ask the WebView not to evict the database under storage pressure.
+      await navigator.storage?.persist?.().catch(() => false)
+      await s.setMeta('persist_asked', true)
     }
+    deck = d
+    store = s
+    session = await newSession(d, s)
   }
 
   onMount(() => {
-    loadDeck()
-      .then((d) => {
-        deck = d
-        session.words = d.words
-        warm(d)
-      })
-      .catch(() => (failed = true))
-    const tick = setInterval(() => (session.now = Date.now()), 200)
-    const visibility = () => session.visibility(document.hidden, Date.now())
+    start().catch((error) => {
+      console.error(error)
+      failed = true
+    })
+    let ticks = 0
+    const timer = setInterval(() => {
+      if (!session) return
+      session.now = Date.now()
+      if (session.phase === 'done' && ++ticks % (RECHECK_MS / 200) === 0) session.advance()
+    }, 200)
+    const visibility = () => session?.visibility(document.hidden, Date.now())
     document.addEventListener('visibilitychange', visibility)
     return () => {
-      clearInterval(tick)
+      clearInterval(timer)
       document.removeEventListener('visibilitychange', visibility)
     }
   })
 
   function play() {
-    const word = session.word
+    const word = session?.word
     if (!deck || !word?.audio) return
     audio?.pause()
     audio = new Audio(deck.base + word.audio.path)
@@ -65,6 +90,7 @@
 
   /** Returns whether the hint cost points: only while the clock runs, and only once. */
   function onHint(hint: Hint): boolean {
+    if (!session) return false
     const charged = session.use(hint)
     if (hint === 'audio') play()
     if (hint === 'forms') {
@@ -76,9 +102,16 @@
   }
 
   function onAnswer(answer: Answer) {
+    if (!session) return
     session.respond(answer, Date.now())
-    navigator.vibrate?.(answer === 'know' ? 30 : [30, 70, 30])
-    if (AUTOPLAY) play()
+    if (session.settings.haptics) navigator.vibrate?.(answer === 'know' ? 30 : [30, 70, 30])
+    if (session.settings.audioAfterAnswer) play()
+  }
+
+  function onNext() {
+    if (!session) return
+    audio?.pause()
+    session.next()
   }
 
   function onOpen(screen: Screen, button: HTMLElement) {
@@ -104,6 +137,20 @@
     shuffleChanged(document.body, before)
   }
 
+  /** After an import: the session starts over from the merged events and settings. */
+  async function onImported(local: Local | null) {
+    if (!deck || !store) return
+    if (local?.lang === 'de' || local?.lang === 'en') i18n.lang = local.lang as Lang
+    if (local?.theme === 'latte' || local?.theme === 'mocha') {
+      theme = local.theme as Theme
+      saveTheme(theme)
+      applyTheme(theme)
+      paintStatusBar()
+    }
+    await store.settlePending()
+    session = await newSession(deck, store)
+  }
+
   function sheetTitle(s: Sheet): string {
     if (s === 'forms') return t.forms.title
     return t.nav[s]
@@ -112,21 +159,24 @@
 
 {#if failed}
   <p class="message">{t.loadFailed}</p>
-{:else if !deck}
+{:else if !session}
   <p class="message">{t.loading}</p>
 {:else}
   <main class="layout">
     <StatusBar {session} />
     <Card {session} {onHint} />
-    <ScoreBar {session} {onAnswer} />
+    <ScoreBar {session} {onAnswer} {onNext} />
     <NavBar {theme} {onOpen} />
   </main>
+  {#if session.error}<p class="error" role="alert">{t.saveFailed} {session.error}</p>{/if}
 {/if}
 
 {#if sheet}
   <Overlay title={sheetTitle(sheet)} onClose={() => (sheet = null)}>
-    {#if sheet === 'forms' && session.word}
+    {#if sheet === 'forms' && session?.word}
       <FormsView word={session.word} />
+    {:else if sheet === 'options' && store}
+      <OptionsView {store} {onImported} />
     {:else}
       <p>{t.later}</p>
     {/if}
@@ -147,5 +197,15 @@
 
   .message {
     padding: 2em 1ch;
+  }
+
+  .error {
+    position: fixed;
+    inset: auto 0.6em calc(0.6em + var(--inset-bottom));
+    margin: 0;
+    padding: 0.4em 1ch;
+    background: var(--bg);
+    border: 1px solid var(--band-hard);
+    color: var(--band-hard);
   }
 </style>
