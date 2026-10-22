@@ -151,12 +151,18 @@ def test_cognate_hint_only_when_glossed(etymology, glosses, hint):
     assert card.cognates_raw
 
 
-def test_modals_are_preterite_present():
-    en = [{"head_templates": [{"expansion": "können (preterite-present, third-person singular present kann)"}],
-           "senses": [{"glosses": ["to be able"], "tags": ["preterite-present"]}], "forms": []}]
-    card = enrich.build_card("können#verb#1", en, [], None)
-    assert "preterite_present" in card.flags
-    assert not {"strong", "weak", "mixed"} & set(card.flags)
+def test_modals_get_their_own_class_and_wissen_is_mixed():
+    def entry(word: str, *categories: str) -> list[dict]:
+        return [{"head_templates": [{"expansion": f"{word} (preterite-present, third-person singular present kann)"}],
+                 "categories": ["German preterite-present verbs", *categories],
+                 "senses": [{"glosses": ["to be able"]}], "forms": []}]
+
+    modal = enrich.build_card("können#verb#1", entry("können", "German modal verbs"), [], None)
+    assert "modal" in modal.flags
+    assert not {"strong", "weak", "mixed"} & set(modal.flags)
+    wissen = enrich.build_card("wissen#verb#1", entry("wissen"), [], None)
+    assert "mixed" in wissen.flags
+    assert "modal" not in wissen.flags
 
 
 def test_closed_classes_win_over_the_extracted_values():

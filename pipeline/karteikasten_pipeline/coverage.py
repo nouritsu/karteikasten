@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from typing import Any
 
 Word = dict[str, Any]
-STRENGTH = frozenset({"strong", "weak", "mixed", "preterite_present"})
+STRENGTH = frozenset({"strong", "weak", "mixed", "modal"})
 VERB_CORE = ("er", "praeteritum", "partizip2", "auxiliary")
 
 
@@ -50,7 +50,7 @@ FIELDS: tuple[Field, ...] = (
     Field("noun_genitive", "Noun genitive (or plural only)", _pos("noun"), _noun_genitive, 1.0),
     Field("verb_core", "Verb er-form, Präteritum, Partizip II, auxiliary", _pos("verb"),
           lambda w: all(w["key_forms"].get(k) for k in VERB_CORE), 1.0),
-    Field("verb_strength", "Verb class (strong, weak, mixed, preterite-present)", _pos("verb"),
+    Field("verb_strength", "Verb class (strong, weak, mixed, modal)", _pos("verb"),
           lambda w: bool(STRENGTH & set(w["flags"])), 0.98),
     Field("prep_case", "Preposition case", _pos("prep", "postp"), lambda w: bool(w["key_forms"].get("case")), 1.0),
     Field("conj_type", "Conjunction type", _pos("conj"), lambda w: bool(w["key_forms"].get("conjunction")), 1.0),

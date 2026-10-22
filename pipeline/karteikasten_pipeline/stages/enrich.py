@@ -4,7 +4,7 @@ Nothing here is invented: a field the data does not have stays empty and shows
 up in the coverage report. Every field records which edition it came from.
 
 - English edition: POS, gender, flags (weak noun, plural only, reflexive,
-  strong/weak/mixed or preterite-present verb), key forms and English glosses,
+  strong/weak/mixed or modal verb), key forms and English glosses,
   cognate from the etymology (kept only when the English word is among the
   word's own English glosses, D49), ordinals of numerals.
 - German edition: German definitions, IPA (Germany standard), hyphenation,
@@ -231,8 +231,10 @@ def verb(card: Card, en: list[dict], separable: str | None) -> None:
     if "reflexive" in main_tags:
         card.flags.append("reflexive")
     head = " ".join(h.get("expansion", "") for e in en for h in e.get("head_templates", []))
-    if "preterite-present" in tags or "preterite-present" in head:
-        card.flags.append("preterite_present")  # the modals and wissen: kann, konnte, gekonnt
+    if "German modal verbs" in _categories(en):
+        card.flags.append("modal")  # D50: können, müssen, dürfen, sollen, mögen, wollen
+    elif "preterite-present" in tags or "preterite-present" in head:
+        card.flags.append("mixed")  # D50: wissen (weiß, wusste, gewusst) is taught as mixed
     elif "strong" in tags or " strong" in head:
         card.flags.append("strong")
     elif "irregular" in tags or "mixed" in tags or "irregular" in head:

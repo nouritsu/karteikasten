@@ -158,8 +158,8 @@ def test_auxiliaries_modals_and_stem_changes(deck):
     assert (k["wissen"]["er"], k["wissen"]["praeteritum"]) == ("weiß", "wusste")
     assert (k["fahren"]["er"], k["fahren"]["du"], k["fahren"]["praeteritum"]) == ("fährt", "fährst", "fuhr")
     assert set(k["fahren"]["auxiliary"]) == {"haben", "sein"}
-    for modal in ("können", "wissen"):
-        assert "preterite_present" in words[f"{modal}#verb#1"]["flags"]
+    assert "modal" in words["können#verb#1"]["flags"]
+    assert "mixed" in words["wissen#verb#1"]["flags"]
 
 
 def test_sich_freuen_is_reflexive(deck):
