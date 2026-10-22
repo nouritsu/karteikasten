@@ -23,3 +23,13 @@ target/
 # Python
 __pycache__/
 .pytest_cache/
+
+# devenv
+.devenv*
+
+# devenv
+.pre-commit-config.yaml
+
+# devenv
+.claude/settings.json
+.mcp.json

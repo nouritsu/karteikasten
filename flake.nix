@@ -1,11 +1,31 @@
 {
   description = "Karteikasten: flashcards for the most frequent German words, as an Android app";
 
-  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
-  outputs = {
+    # The dev shell is devenv in flake mode, so it keeps this nixpkgs and the packages below.
+    devenv.url = "github:cachix/devenv";
+    git-hooks = {
+      url = "github:cachix/git-hooks.nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    treefmt-nix = {
+      url = "github:numtide/treefmt-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    # house style: treefmt, git hooks, claude
+    conf-nixos = {
+      url = "github:nouritsu/conf-nixos";
+      flake = false;
+    };
+  };
+
+  outputs = inputs @ {
     self,
     nixpkgs,
+    devenv,
+    ...
   }: let
     inherit (nixpkgs) lib;
 
@@ -80,34 +100,41 @@
       own,
       ...
     }: {
-      default = pkgs.mkShell {
-        packages = [
-          # Pipeline: Python + DuckDB, media processing
-          own.pipeline.devEnv
-          pkgs.duckdb
-          pkgs.sqlite
-          pkgs.ffmpeg
-          pkgs.vips
-          # App; qrencode prints the link app/phone.fish serves
-          pkgs.nodejs
-          pkgs.qrencode
-          # Curation tool
-          pkgs.cargo
-          pkgs.rustc
-          pkgs.clippy
-          pkgs.rustfmt
-          pkgs.rust-analyzer
-          # APK: Gradle and a JDK to build app/android by hand, adb to install
-          pkgs.gradle
-          pkgs.jdk21
-          pkgs.android-tools
-          # Nix
-          pkgs.alejandra
+      # Needs impure eval for the project root: `nix develop --no-pure-eval`.
+      default = devenv.lib.mkShell {
+        inherit inputs pkgs;
+        modules = [
+          "${inputs.conf-nixos}/templates/base/devenv.nix"
+          {
+            packages = [
+              # Pipeline: Python + DuckDB, media processing
+              own.pipeline.devEnv
+              pkgs.duckdb
+              pkgs.sqlite
+              pkgs.ffmpeg
+              # App; qrencode prints the link app/phone.fish serves
+              pkgs.nodejs
+              pkgs.qrencode
+              # Curation tool
+              pkgs.cargo
+              pkgs.rustc
+              pkgs.clippy
+              pkgs.rustfmt
+              pkgs.rust-analyzer
+              # APK: Gradle and a JDK to build app/android by hand, adb to install
+              pkgs.gradle
+              pkgs.jdk21
+              pkgs.android-tools
+              # Nix
+              pkgs.alejandra
+            ];
+
+            env = {
+              ANDROID_HOME = "${own.apk.sdk}";
+              RUST_SRC_PATH = "${pkgs.rustPlatform.rustLibSrc}";
+            };
+          }
         ];
-
-        ANDROID_HOME = own.apk.sdk;
-
-        RUST_SRC_PATH = "${pkgs.rustPlatform.rustLibSrc}";
       };
     });
 
