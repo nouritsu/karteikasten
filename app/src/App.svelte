@@ -198,7 +198,7 @@
 
   function setSettings(patch: Partial<Settings>) {
     if (patch.retention !== undefined && patch.retention !== settings.retention) rebuild = true
-    if (patch.n !== undefined || patch.newPerDay !== undefined || patch.learnAheadMin !== undefined) requeue = true
+    if (['n', 'newPerDay', 'learnAheadMin', 'level', 'checksPerDay'].some((key) => key in patch)) requeue = true
     settings = { ...settings, ...patch }
     if (session) session.settings = settings
     attempt(async () => {

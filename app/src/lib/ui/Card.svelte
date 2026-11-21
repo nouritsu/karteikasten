@@ -58,15 +58,19 @@
     if (face.phase === 'ready') settled = false
   })
 
-  // Feierabend (D21): today's reviews and their average, new words and the streak, the
-  // coverage since the day began, and what comes next: a learning card later today, or
-  // tomorrow's count. The lines scramble into place under the headline.
+  // Done for today (D21): today's reviews and their average, a level up when the checks
+  // went well (D67), new words and the streak, the coverage since the day began, and what
+  // comes next: a learning card later today, or tomorrow's count. The lines scramble into
+  // place under the headline.
   const doneLines = $derived.by(() => {
     if (face.phase !== 'done') return []
     const d = t.done
     const lines: string[] = []
     const average = session.averageToday
     lines.push([d.reviews(session.today), average !== null ? d.average(average) : ''].filter(Boolean).join(' · '))
+    // The checks went well: a level up is suggested, never made (D67).
+    const up = session.levelNudge()
+    if (up) lines.push(d.nudge(up.known, up.total), d.tryLevel(up.next.name))
     lines.push([session.newToday ? d.newWords(session.newToday) : '', session.streak ? d.streak(session.streak) : ''].filter(Boolean).join(' · '))
     const [from, to] = [Math.round(session.coverageAtStart() * 100), Math.round(session.coverage * 100)]
     lines.push(`${d.coverage} ${from}% → ${to}%${to > from ? ' ▲' : ''}`)

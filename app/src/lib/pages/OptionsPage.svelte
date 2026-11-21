@@ -3,6 +3,7 @@
   import { backupJson } from '../background'
   import { COLOR_KEYS } from '../colors'
   import { CLOCKS, SWITCHABLE, TEXT_SIZES } from '../display'
+  import { levelOf, stepLevel } from '../engine/level'
   import { DEFAULT_SCORE, type Hint, type ScoreSettings } from '../engine/score'
   import { LOCALE, strings } from '../strings'
   import { askNotifications, lastExport, type ExportResult } from '../native'
@@ -68,7 +69,7 @@
     onSettings({ n: next >= nMax ? null : next })
   }
   const percent = (share: number) => `${Math.round(share * 100)}%`
-  const STUDY_LABEL = 16 // "New words a day" and a space, so Study's values line up
+  const STUDY_LABEL = 15 // "New words a day", so Study's values line up
   const RETENTION = { min: 0.8, max: 0.97 }
 
   // Score (D17, D39) --------------------------------------------------------------------
@@ -251,6 +252,27 @@
   </Block>
 
   <Block title={t.study} icon="school">
+    {@const level = levelOf(settings.level)}
+    <Stepper
+      label={t.level}
+      labelWidth={STUDY_LABEL}
+      width={15}
+      value={t.levelValue(level.name, level.rank)}
+      onStep={(d) => onSettings({ level: stepLevel(settings.level, d) })}
+      atStart={level.rank === 0}
+      atEnd={stepLevel(settings.level, 1) === settings.level}
+    />
+    {#if level.rank}
+      <Stepper
+        label={t.checksPerDay}
+        labelWidth={STUDY_LABEL}
+        width={3}
+        value={String(settings.checksPerDay)}
+        onStep={(d) => onSettings({ checksPerDay: stepBy(settings.checksPerDay, 5 * d, 0, 50) })}
+        atStart={settings.checksPerDay <= 0}
+        atEnd={settings.checksPerDay >= 50}
+      />
+    {/if}
     <Stepper
       label={t.newPerDay}
       labelWidth={STUDY_LABEL}
@@ -280,6 +302,7 @@
       atEnd={settings.learnAheadMin >= 60}
     />
     {@render toggle(t.audioAfter, settings.audioAfterAnswer, () => onSettings({ audioAfterAnswer: !settings.audioAfterAnswer }))}
+    {#if level.rank}<p class="muted">{t.levelHelp(level.rank, settings.checksPerDay)}</p>{/if}
     <p class="muted">{t.learnAheadHelp}</p>
   </Block>
 

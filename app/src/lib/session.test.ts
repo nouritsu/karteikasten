@@ -4,7 +4,7 @@ import { State } from './engine/scheduler'
 import { Rating } from './engine/score'
 import { Session, type Sink } from './session.svelte'
 import { DEFAULT_SETTINGS, type Settings } from './store/settings'
-import { deckWords } from './testing'
+import { deckWord, deckWords } from './testing'
 
 const T0 = new Date('2026-10-10T10:00:00').getTime()
 
@@ -168,5 +168,41 @@ describe('reviews', () => {
     const again = session([...introduced, ...sink.events], { newPerDay: 3 }).s
     expect(again.states).toEqual(s.states)
     expect(again.total).toBe(s.total)
+  })
+})
+
+describe('level (D67)', () => {
+  const words = [deckWord('x#noun#1', 50), deckWord('y#noun#1', 99), deckWord('z#noun#1', 150), deckWord('w#noun#1', 300)]
+  const levelSession = (settings: Partial<Settings>) =>
+    new Session({ words, deckVersion: 'v1', settings: { ...DEFAULT_SETTINGS, ...settings }, events: [], sink: new Recorder(), now: T0 })
+
+  it('checks words up to the level under their own limit, and starts new words after it', () => {
+    const s = levelSession({ level: 'a1.1', checksPerDay: 1, newPerDay: 1 })
+    expect(s.counts.fresh).toBe(2) // one check and one new word left today
+    expect([s.pick?.kind, s.word?.lemma]).toEqual(['level', 'x'])
+    answer(s, 'know', T0)
+    expect([s.pick?.kind, s.word?.lemma]).toEqual(['new', 'z']) // the day's check is used; y waits
+    answer(s, 'know', T0 + 10_000)
+    expect(s.phase).toBe('done')
+  })
+
+  it('runs as before at Beginner', () => {
+    const s = levelSession({ level: 'beginner', newPerDay: 15 })
+    expect([s.pick?.kind, s.word?.lemma]).toEqual(['new', 'x'])
+  })
+
+  it('suggests the next level once the checks went well', () => {
+    const many = deckWords(55)
+    const events = many.slice(0, 50).map((w, i) => {
+      const ts = new Date(T0 - 86_400_000 + i * 60_000).toISOString()
+      const review = { shown_at: ts, ready_at: ts, answered_at: ts, answer: 'know' as const, undo: false, score: 100, hints: [], active_ms: 1000, grade: Rating.Easy }
+      return { id: `L${String(i).padStart(3, '0')}`, type: 'review' as const, word_id: w.id, ts, deck_version: 'v1', app_version: 'v', review }
+    })
+    const s = new Session({ words: many, deckVersion: 'v1', settings: { ...DEFAULT_SETTINGS, level: 'a1.1' }, events, sink: new Recorder(), now: T0 })
+    expect(s.levelNudge()).toMatchObject({ known: 50, total: 50, next: { id: 'a1.2' } })
+    s.settings = { ...s.settings, level: 'beginner' }
+    expect(s.levelNudge()).toMatchObject({ next: { id: 'a1.1' } }) // from Beginner too
+    s.settings = { ...s.settings, level: 'b1.2' }
+    expect(s.levelNudge()).toBeNull() // nothing above
   })
 })

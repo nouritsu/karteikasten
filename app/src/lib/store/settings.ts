@@ -4,6 +4,7 @@
 
 import { DEFAULT_COLORS, toColors, type Colors } from '../colors'
 import { CLOCKS, SWITCHABLE, TEXT_SIZES, type Clock, type Switchable, type TextSize } from '../display'
+import { LEVEL_IDS, type LevelId } from '../engine/level'
 import { DEFAULT_SCORE, type ScoreSettings } from '../engine/score'
 import { SPANS, STAT_PANES, toOrder, toSubset, type DayRange, type Span, type StatPane } from '../stats/panes'
 
@@ -28,6 +29,8 @@ export interface Settings {
   score: ScoreSettings
   audioAfterAnswer: boolean
   learnAheadMin: number // with nothing else left, a learning card due this soon comes early
+  level: LevelId // D67: words up to its rank come as checks, and new words start after it
+  checksPerDay: number
   // Display (D59)
   textSize: TextSize
   motion: Switchable
@@ -51,6 +54,8 @@ export const DEFAULT_SETTINGS: Settings = {
   score: DEFAULT_SCORE,
   audioAfterAnswer: true,
   learnAheadMin: 20,
+  level: 'beginner',
+  checksPerDay: 20,
   textSize: 'system',
   motion: 'system',
   haptics: 'system',
@@ -85,6 +90,8 @@ export function withDefaults(saved: Partial<Settings> | undefined): Settings {
     ...DEFAULT_SETTINGS,
     ...(saved as Partial<Settings>),
     score,
+    level: oneOf(s.level, LEVEL_IDS, 'beginner'),
+    checksPerDay: typeof s.checksPerDay === 'number' ? s.checksPerDay : DEFAULT_SETTINGS.checksPerDay,
     textSize: oneOf(s.textSize, TEXT_SIZES, 'system'),
     motion: oneOf(s.motion, SWITCHABLE, 'system'),
     haptics,

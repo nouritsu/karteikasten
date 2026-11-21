@@ -7,7 +7,8 @@
 
 import { ActiveClock } from './engine/clock'
 import { dayKey, dayStart, streak } from './engine/day'
-import { ulid, type ReviewDetail, type StudyEvent } from './engine/events'
+import { byTime, ulid, type ReviewDetail, type StudyEvent } from './engine/events'
+import { levelOf, nudge, stepLevel, type Nudge } from './engine/level'
 import { counts, nextCard, type Pick, type QueueInput } from './engine/queue'
 import { isKnown, replay, scheduler, step, type WordState } from './engine/scheduler'
 import { grade, score, type Hint } from './engine/score'
@@ -56,7 +57,8 @@ export class Session {
   #events: StudyEvent[] = [] // every event so far, for the coverage at the start of a day
   #coverageAtStart: [string, number] | null = null
   error = $state<string | null>(null)
-  #newByDay = new Map<string, number>() // words first studied per learning day
+  #firstByDay = new Map<string, number[]>() // the ranks of the words first studied, per learning day
+  #rank: Map<string, number>
   #clock = new ActiveClock()
   #frozen = 0
   #shownAt = 0
@@ -72,6 +74,7 @@ export class Session {
 
   constructor(options: SessionOptions) {
     this.words = [...options.words].sort((a, b) => a.rank - b.rank)
+    this.#rank = new Map(this.words.map((w) => [w.id, w.rank]))
     this.deckVersion = options.deckVersion
     this.settings = options.settings
     this.#sink = options.sink
@@ -102,15 +105,15 @@ export class Session {
     if (this.phase === 'ready' || this.phase === 'done') this.advance(now)
   }
 
-  /** New words per learning day, from the states. */
+  /** The words first studied on each learning day, from the states. */
   #countNew(): void {
-    this.#newByDay = new Map()
-    for (const state of this.states.values()) {
-      if (state.first) {
-        const day = dayKey(state.first)
-        this.#newByDay.set(day, (this.#newByDay.get(day) ?? 0) + 1)
-      }
-    }
+    this.#firstByDay = new Map()
+    for (const [id, state] of this.states) if (state.first) this.#first(id, state.first)
+  }
+
+  #first(id: string, at: string): void {
+    const day = dayKey(at)
+    this.#firstByDay.set(day, [...(this.#firstByDay.get(day) ?? []), this.#rank.get(id) ?? Infinity])
   }
 
   // -- what the views show ------------------------------------------------------------------
@@ -147,7 +150,7 @@ export class Session {
 
   /** Words studied for the first time today. */
   get newToday(): number {
-    return this.#newByDay.get(dayKey(this.now)) ?? 0
+    return this.#firstByDay.get(dayKey(this.now))?.length ?? 0
   }
 
   /** The coverage as today began (04:00), from the events before it; once a day. */
@@ -188,16 +191,43 @@ export class Session {
   // -- the queue ------------------------------------------------------------------------------
 
   #queue(now: number, last?: string): QueueInput {
-    const today = dayKey(now)
+    // Today's first studies split at the level: checks up to its rank, new words past it.
+    const level = levelOf(this.settings.level).rank
+    const firsts = this.#firstByDay.get(dayKey(now)) ?? []
+    const checked = firsts.filter((rank) => rank <= level).length
     return {
       words: this.words,
       states: this.states,
       now: new Date(now),
       n: this.settings.n ?? Infinity,
-      newLeft: this.settings.newPerDay - (this.#newByDay.get(today) ?? 0),
+      newLeft: this.settings.newPerDay - (firsts.length - checked),
+      level,
+      checksLeft: this.settings.checksPerDay - checked,
       last,
       learnAheadMs: this.settings.learnAheadMin * 60_000,
     }
+  }
+
+  /** The next level up, when your first answers on the words it would turn into checks
+   *  have been nearly all known lately (D67); for Done for today. */
+  levelNudge(): Nudge | null {
+    const key = `${this.#events.length}:${this.settings.level}`
+    if (this.#nudge?.[0] !== key) this.#nudge = [key, this.#findNudge()]
+    return this.#nudge[1]
+  }
+
+  #nudge: [string, Nudge | null] | null = null
+
+  #findNudge(): Nudge | null {
+    const level = levelOf(stepLevel(this.settings.level, 1)).rank
+    const seen = new Set<string>()
+    const grades: number[] = []
+    for (const event of [...this.#events].sort(byTime)) {
+      if (event.type !== 'review' || !event.review || seen.has(event.word_id)) continue
+      seen.add(event.word_id)
+      if ((this.#rank.get(event.word_id) ?? Infinity) <= level) grades.push(event.review.grade)
+    }
+    return nudge(grades, this.settings.level)
   }
 
   /** The next card, or Feierabend. Also called while Feierabend shows, for a learning
@@ -321,10 +351,7 @@ export class Session {
     const before = this.states.get(event.word_id)
     const state = step(before, event, this.#fsrs)
     this.states = new Map(this.states).set(event.word_id, state)
-    if (!before?.introduced && state.first) {
-      const day = dayKey(state.first)
-      this.#newByDay.set(day, (this.#newByDay.get(day) ?? 0) + 1)
-    }
+    if (!before?.introduced && state.first) this.#first(event.word_id, state.first)
     if (event.type === 'review') {
       this.total++
       const day = dayKey(event.ts)

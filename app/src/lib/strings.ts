@@ -67,6 +67,8 @@ export const strings = {
     nextAt: (time: string) => `Next card due at ${time}.`,
     tomorrow: (n: number) => `${plural(n, 'card', 'cards')} due tomorrow.`,
     nothing: 'See you tomorrow.',
+    nudge: (known: number, total: number) => `You already knew ${known} of your last ${total} new words.`,
+    tryLevel: (name: string) => `Try ${name}? Options → Study → Level`,
   },
   reminder: {
     title: 'Karteikasten',
@@ -139,6 +141,11 @@ export const strings = {
     clocks: { system: 'System', '24h': '24h', '12h': '12h' } as Record<string, string>,
     displayHelp: 'System follows the phone: its font size, Remove animations, and touch feedback.',
     study: 'Study',
+    level: 'Level',
+    levelValue: (name: string, rank: number) => (rank ? `${name} · top ${rank}` : name),
+    checksPerDay: 'Checks a day',
+    levelHelp: (rank: number, checks: number) =>
+      `Words up to #${rank} come as quick checks, ${checks} a day. Know one and it comes back in a week, then months; miss one and you learn it. New words start at #${rank + 1}.`,
     newPerDay: 'New words a day',
     vocabulary: 'Vocabulary',
     top: (n: number) => `top ${n}`,
