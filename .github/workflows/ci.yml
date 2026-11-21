@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # One job on purpose: a second one would restore the same multi-GB store again, and Nix
+  # already builds the checks in parallel: the app's types and tests, the pipeline's
+  # tests, the curation tool's tests and clippy, the APK with the stub deck, and alejandra.
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      actions: write # lets cache-nix-action delete the caches it replaces
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: nixbuild/nix-quick-install-action@9f63be77f412a248c9d9a65a4c82cf066cdf8f0c # v35
+        with:
+          # Keeps the inputs of a build, not just its output, so the cache holds them.
+          nix_conf: |
+            keep-outputs = true
+
+      # The Android SDK is unfree, so cache.nixos.org doesn't have it; without this cache
+      # every run downloads it from Google. Docs: https://github.com/nix-community/cache-nix-action
+      # Only main saves: a cache made on a PR is invisible to other branches and would
+      # only eat into GitHub's 10 GB limit.
+      - uses: nix-community/cache-nix-action@7df957e333c1e5da7721f60227dbba6d06080569 # v7.0.2
+        with:
+          primary-key: nix-${{ runner.os }}-${{ hashFiles('flake.lock', 'nix/**', 'app/package-lock.json', 'curate/Cargo.lock', 'pipeline/pyproject.toml') }}
+          restore-prefixes-first-match: nix-${{ runner.os }}-
+          save: ${{ github.ref == 'refs/heads/main' }}
+          # Before saving, collect garbage until the store is at most this big...
+          gc-max-store-size-linux: 4G
+          # ...and delete the older caches, so one is left under GitHub's 10 GB limit.
+          purge: ${{ github.ref == 'refs/heads/main' }}
+          purge-prefixes: nix-${{ runner.os }}-
+          purge-created: 0
+          purge-primary-key: never
+
+      # The devenv dev shell needs the project directory, so evaluation can't be pure.
+      - name: Check the flake
+        run: nix flake check --no-pure-eval -L
+
+      # The garbage collection removes whatever nothing points at, and flake check leaves
+      # no links. With keep-outputs, a link to each check also keeps its build inputs. See
+      # https://github.com/nix-community/cache-nix-action#save-nix-store-paths-from-garbage-collection
+      - name: Keep the build inputs through garbage collection
+        if: github.ref == 'refs/heads/main'
+        run: |
+          mkdir -p "$RUNNER_TEMP/gcroots"
+          for check in $(nix eval --json .#checks.x86_64-linux --apply builtins.attrNames | jq -r '.[]'); do
+            nix build --out-link "$RUNNER_TEMP/gcroots/$check" ".#checks.x86_64-linux.$check"
+          done
