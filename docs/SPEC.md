@@ -21,7 +21,7 @@ Karteikasten is a phone-only Android app (D40) that teaches the top n German wor
 
 - Frequency: a spoken-weighted blend of subtitle and news/web corpora, lemmatized with Wiktionary.
 - Per word: type, gender, IPA with syllables and stress, audio, key forms and full tables, meaning (English and German, toggle), example sentences, English cognate hint. No pictures (D46).
-- Look: monospace text, box borders with inset titles, Unicode symbol icons (D27). It is rendered in HTML/CSS, not a terminal grid, so the word can be large.
+- Look: monospace text, box borders with inset titles, Material icons drawn as SVG (D57). It is rendered in HTML/CSS, not a terminal grid, so the word can be large.
 - Learning: two buttons (Weiß ich / Weiß ich nicht), a decaying score with hint penalties, and the score mapped to an FSRS-6 grade.
 - Scope: personal use now, data kept release-ready. The desktop runs the data pipeline and the curation tool and builds the APK (D42).
 - "Karteikasten" is a working title; rename freely.
@@ -57,7 +57,7 @@ All 22 decisions are final; D19 was not answered, so it takes the recommended de
 
 ### Amendments
 
-D23–D26 were accepted after Phase 1 on 2026-10-06 (evidence in `reports/phase1-coverage.md`); D27–D39 come from your Phase 2 review on 2026-10-07; D40–D45 from your request for an APK the same day; D46 from your request on 2026-10-15; D47 records your Nix choices, the plain flake and alejandra from Phase 0 on 2026-10-06 and the devenv shell from 2026-10-19; D48–D50 are your choices in Phase 3 on 2026-10-22, D51 your choice at the start of Phase 4 the same day, D52 your choice at the start of Phase 5, and D53 your choice after its first phone test. The sections below are amended where they apply and marked with the decision's id.
+D23–D26 were accepted after Phase 1 on 2026-10-06 (evidence in `reports/phase1-coverage.md`); D27–D39 come from your Phase 2 review on 2026-10-07; D40–D45 from your request for an APK the same day; D46 from your request on 2026-10-15; D47 records your Nix choices, the plain flake and alejandra from Phase 0 on 2026-10-06 and the devenv shell from 2026-10-19; D48–D50 are your choices in Phase 3 on 2026-10-22, D51 your choice at the start of Phase 4 the same day, D52 your choice at the start of Phase 5, and D53 your choice after its first phone test; D54–D65 are your choices on 2026-11-21, bringing over fast-track's design language and features, with the screens drawn in `docs/mockups.md`, and D66 your choice after reviewing them the same day. The sections below are amended where they apply and marked with the decision's id.
 
 | ID | Topic | Decision |
 | --- | --- | --- |
@@ -92,6 +92,19 @@ D23–D26 were accepted after Phase 1 on 2026-10-06 (evidence in `reports/phase1
 | D51 | Abbreviations | Abbreviations stay in the deck (they are everyday vocabulary). A word whose only Wiktionary senses are abbreviations takes them as its English glosses ("abbreviation of Doktor") and is flagged `abbreviation`; abbreviated nouns need no gender, plural or genitive, so the noun checks and coverage fields skip them. |
 | D52 | Export target | Export writes `Documents/Karteikasten/karteikasten-YYYY-MM-DD.json` on the phone through `@capacitor/filesystem`, without asking each time; a Syncthing folder can sync it later (D22). Android 11 and newer need no permission for files the app creates. Import picks the file with the system file picker. Replaces "Export downloads". |
 | D53 | New words | A new word runs like a review: Bereit shows only the word, the score runs, and Weiß ich / Weiß ich nicht give its first FSRS rating. A known word is done in one card (a high score is Easy); an unknown one shows its meaning and comes back within minutes as a learning card. No Intro, no Kenne ich schon on the card, no separate check; Kenne ich schon stays a Wörter action. Words left from an Intro before D53 get their scored check first. Replaces D16's Intro; its 15 new words a day stay. |
+| D54 | Pages | Five pages along a bottom tab bar replace the Menü: Karte │ Statistik │ Wörter │ Optionen │ Info, switched by a tap or a swipe, the accent line under the current tab sliding with the page. Suche is Wörter's search field. Formen, Wort and Lizenzen open as panes that hang below their page and push it up, instead of sheets over it. Thema and the language switch move into Optionen; the layout ratios and the score/nav order go. Replaces D31's Menü; amends D19, D35 (a row in Optionen) and D37 (the circle grows from Optionen's Variante button). |
+| D55 | Status block | Titled "Status", since a page is now called Statistik. Amends D33. |
+| D56 | Controls | fast-track's controls: buttons set into a block's border (Schließen at the right of a pane's top edge, a block's own actions in its bottom edge), word buttons in brackets that read muted when off, `<` `>` steppers that repeat while held and follow a drag, red for whatever closes, resets or deletes, and a second press for Zurücksetzen. The answer and hint buttons stay full buttons inside their blocks. |
+| D57 | Icons | Material Icons (Apache 2.0), drawn inline as SVG in the accent, on buttons and before block titles, replace the Unicode symbols; the Noto Sans Symbols 2 subset goes. Replaces D27. |
+| D58 | Theme and colours | Variante: Mocha, Latte, or System, which follows the phone's dark mode. The accent and the four gender colours are picked from Catppuccin's fourteen accents; the defaults stay mauve, and blue, red, green and pink. Amends D30. |
+| D59 | Display | Schriftgröße (System, Klein, Normal, Groß), Bewegung and Haptik (System, An, Aus) and Uhr (System, 24 h, 12 h). System reads Android's font scale, Remove animations, touch feedback and 24-hour setting through a small native plugin. Replaces the haptics on/off setting. |
+| D60 | Statistik | A scrolling column of blocks: Überblick, Verlauf, Punkte, Behalten, Abdeckung, Tage (the 12-week heatmap), Rhythmus, Rekorde and Problemwörter. A span in Überblick's top edge (30 days, 90 days, a year, all, or any range) sets what they cover, set against the span before with ▲ ▼; Rekorde and Problemwörter cover all time. Charts are SVG on the text grid, read by touch; ⇅ Ordnen reorders blocks or puts them away. |
+| D61 | Info | Adjektivendungen, Quellen (each source's licence; a search lists a word's own credits from `attribution.json`) and Über with the app and deck versions and the credits; a Lizenzen pane shows the bundled THIRD_PARTY_NOTICES.md. |
+| D62 | Backup and privacy | Eine Datei behalten writes `karteikasten.json`, replaced each time, instead of a dated file; regular exports run on an OnCalendar schedule with the app closed. Android's cloud backup of the app's data stays off unless switched on under Privatsphäre. Amends D52; replaces Phase 7's export nudge. |
+| D63 | Study reminder | A daily notification at a set time, on days with cards due and no reviews yet. Each time the app goes to the background it schedules the next week's reminders with the counts they will have, so they are right with the app closed. |
+| D64 | Debug build | `nix run .#apk-debug -- --install` installs "Karteikasten (debug)" as `com.nouritsu.karteikasten.debug`, with its own storage, beside the release app. D44's id stays the release app's. |
+| D65 | Launcher icon | fast-track's icon with Material Icons' translate glyph (文A) in place of its fork and spoon (`app/icon.svg`), a monochrome twin for Android's themed icons, and a status-bar icon for the reminder. |
+| D66 | English UI | The app speaks English only, to English speakers learning German: one `strings.ts`, no German UI and no language switch. German is the content: the word, its forms and its sentences. The card's meaning is always the English glosses, and the answer view always adds the sentence's English translation; the German definitions stay in the deck but no longer show. The spec's German names stay as names; the app says Ready!, Know it / Don't know, I was wrong, Next, Done for today!, Score, Cognate, and Card │ Stats │ Words │ Options │ Info. Regular exports read English schedules only. Replaces D20; amends D8, D35 and D54 (no Sprache row). |
 
 ## Implementation defaults
 
@@ -150,7 +163,7 @@ karteikasten/
 ├─ curate/                # Rust + ratatui
 ├─ app/                   # Svelte 5 + Vite
 │  ├─ android/            # Capacitor's Android project
-│  └─ src/lib/{engine,store,ui,i18n}/
+│  └─ src/lib/{engine,store,stats,pages,panes,ui}/
 ├─ docs/                  # SPEC.md (export of this doc), sources/*.md
 ├─ reports/               # coverage and diff reports
 └─ data/                  # gitignored
@@ -284,14 +297,13 @@ Overrides are committed and re-applied on every build; an override that no longe
 
 ## App layout and look
 
-The app is one portrait screen of four stacked blocks: status, card and score share the height 20/60/10 above the Menü, which is one row of icon buttons (D31). They are styled like ratatui but drawn with HTML/CSS.
+The app is five portrait pages along a bottom tab bar, Karte │ Statistik │ Wörter │ Optionen │ Info, switched by a tap or a swipe (D54). Karte, the study screen, is three stacked blocks: status, card and score share the height 20/60/10. Formen, Wort and Lizenzen hang below their page as panes. They are styled like ratatui but drawn with HTML/CSS; `docs/mockups.md` draws every page and pane.
 
-- Ratios are settings. Another setting swaps the score and nav blocks so the answer buttons sit lowest.
-- Monospace everywhere. Each block has a 1 px border with rounded corners and its title inset in the top border, like a ratatui Block.
-- Text sizes are multiples of the base size. The word auto-fits the card width between 1.5× and 3×; nothing else scales.
-- Gender colours are theme tokens: der blue, die red, das green, plural-only purple (pink in Catppuccin, where purple is the accent; D30).
-- Icons are Unicode symbols drawn by the app font, none with an emoji form (table below, D27); bracketed labels stand in for them in the mockups.
-- Mockup content is illustrative; real content comes from the pipeline. Mockups use 34 × 30 cells; a phone gives about 40–48 columns.
+- Monospace everywhere. Each block has a 1 px border with rounded corners and its title inset in the top border, like a ratatui Block; buttons can sit in a border too (D56).
+- Text sizes are multiples of the base size, which Schriftgröße sets (D59). The word auto-fits the card width between 1.5× and 3×; nothing else scales.
+- Gender colours are theme tokens: der blue, die red, das green, plural-only purple (pink in Catppuccin, where purple is the accent; D30); the accent and all four can be picked (D58).
+- Icons are Material Icons drawn as SVG (table below, D57); the mockups draw the nearest Unicode symbol.
+- Mockup content is illustrative; real content comes from the pipeline. The mockups below predate D54 and use 34 × 30 cells; `docs/mockups.md` uses 44 columns, about what a 375 px phone shows.
 
 Bereit (every card starts here; all status fields dashed, buttons disabled):
 
@@ -380,19 +392,17 @@ Beantwortet after Weiß ich (score frozen, hints free, undo offered; the meaning
 ╰────────────────────────────────╯
 ```
 
-| Element | Icon | Code point |
-| --- | --- | --- |
-| Audio | ♪ eighth note | U+266A |
-| Formen | ▦ square with crosshatch (a table) | U+25A6 |
-| Satz | ¶ pilcrow | U+00B6 |
-| Verwandt | ⚯ two linked circles (a link) | U+26AF |
-| Optionen | ⛭ gear without hub | U+26ED |
-| Thema | ⏾ moon in Mocha, ☼ sun in Latte (the current mode), from Noto Sans Symbols 2 | U+23FE, U+263C |
-| Statistik | ▥ square with vertical bars | U+25A5 |
-| Wörter | 🕮 book, from Noto Sans Symbols 2 (Iosevka lacks it) | U+1F56E |
-| Suche | ⌕ magnifier (telephone recorder) | U+2315 |
-| Info | ⓘ circled small i | U+24D8 |
-| Sprache | de or en, the current language | — |
+| Element | Material icon (D57) |
+| --- | --- |
+| Audio | volume_up |
+| Formen | table_chart |
+| Satz | notes |
+| Verwandt | link |
+| Wörter, Quellen | menu_book; Suche: search |
+| Thema, Variante | contrast; dark_mode, light_mode or brightness_auto for Mocha, Latte or System |
+| Statistik's blocks | insights, bar_chart, speed, psychology, pie_chart, calendar_month, schedule, emoji_events, warning |
+| Info | info; Lizenzen: gavel |
+| Schließen, Standard, Ordnen | close, restart_alt, swap_vert |
 
 ## Card flow and score
 
@@ -405,7 +415,7 @@ Weiter always returns to Bereit, and the clock runs only in Läuft. (The diagram
 1. Bereit: the card shows Bereit! as large plain text and no greeting (D28, D34). Every status-bar field shows dashes at its normal width; hint and answer buttons are disabled. On the first open of a day, a word of the day (an already-known word with its best sentence) sits above the button.
 2. Enthüllen: status fields fill in. The word with its article appears by letter shuffle: each letter cycles random letters of the same case (including ÄÖÜß) and locks left to right with about 50 ms stagger, 700 ms at most. IPA and syllables fade in after. With `prefers-reduced-motion`, the word appears at once.
 3. Läuft: the clock starts when the last letter locks. The score decays, hints cost points, and the buttons are Weiß ich nicht and Weiß ich. The score shows in the Punkte block's title, shuffling on every change, and the number and border fade to its band's colour (D29). Hint buttons show no costs; a press that costs points flashes its deduction on the button, and Satz types its sentence in below the word (D32).
-4. Beantwortet: the meaning (in the UI language, D35), key forms and the chosen sentence show; hints are free; audio plays once if that setting is on. After Weiß ich, the score bar offers "war doch falsch" (undo) and Weiter; undo stays available until Weiter. After Weiß ich nicht, only Weiter.
+4. Beantwortet: the meaning (in English, D66), key forms and the chosen sentence show; hints are free; audio plays once if that setting is on. After Weiß ich, the score bar offers "war doch falsch" (undo) and Weiter; undo stays available until Weiter. After Weiß ich nicht, only Weiter.
 5. New words (D53): the same flow; the first answer is the word's first FSRS rating. Weiß ich nicht makes it a learning card that comes back within minutes; Weiß ich with a high score (Easy) schedules it days ahead.
 
 The clock pauses while the page is hidden (`visibilitychange`) and resumes when it is visible again.
@@ -473,12 +483,12 @@ Export and import:
 
 Languages:
 
-- UI strings live in `app/src/lib/i18n/de.ts` and `en.ts`; German is the default and the translate button in the Menü switches it (D35).
-- The meaning follows the UI language: English glosses with the sentence's English translation, or German definitions without it (D35). The choice is saved.
+- UI strings live in `app/src/lib/strings.ts`, in English only (D66).
+- The meaning is the English glosses, and the answer view adds the sentence's English translation (D66).
 
 ## Status bar and screens
 
-The status block carries eleven fields, all dashed during Bereit, under a title with the weekday and time (D33). The Menü opens six screens, and Feierabend! closes each session.
+The status block, titled Status (D55), carries eleven fields, all dashed during Bereit, under a title with the weekday and time (D33). The tabs lead to four pages besides Karte (D54), and Feierabend! closes each session.
 
 | Field | Meaning |
 | --- | --- |
@@ -496,15 +506,14 @@ The status block carries eleven fields, all dashed during Bereit, under a title 
 
 | Screen | Contents |
 | --- | --- |
-| Optionen | Daily new limit; n (up to the deck's `n_max`); desired retention; all score numbers and grade bands; layout ratios and score/nav order; audio after answer; haptics; reduced motion; font size; export and import |
-| Thema | Switches between Catppuccin Latte and Mocha (D30), in a circle from the button (D37) |
-| Statistik | 12-week heatmap (░▒▓█), 30-day review sparkline, average-score trend, 30-day retention, known words per rank band (1–500, 501–1000, …), coverage %, leeches |
-| Wörter | All n words with rank, lemma, type and status; filters by status, type and gender; a detail view with all data and no scoring; actions Kenne ich schon, Pausieren, Zurücksetzen |
-| Suche | Opens Wörter with search focused; umlaut-tolerant (ae matches ä) |
-| Info | Sources and per-item credits (searchable), deck and app versions, licence notes, the generic adjective-ending table |
+| Optionen | Thema: Variante (Mocha, Latte, System) and Farben (D58); Anzeige: Schriftgröße, Bewegung, Haptik, Uhr (D59); Lernen: daily new limit, n (up to the deck's `n_max`), desired retention, learn-ahead, audio after answer; Punkte: all score numbers and grade bands; Erinnerung (D63); Sicherung: export and import, one file, regular exports (D62); Privatsphäre: cloud backup (D62) |
+| Statistik | A span (30 days, 90 days, a year, all, a range) against the span before; Verlauf, Punkte, Behalten, Abdeckung per rank band, Tage (the 12-week heatmap), Rhythmus, Rekorde, Problemwörter; reorder or put away (D60) |
+| Wörter | All n words with rank, lemma, type and status; filters by status, type and gender; the Wort pane with all data and no scoring; actions Kenne ich schon, Pausieren, Zurücksetzen |
+| Suche | Wörter's search field (D54); umlaut-tolerant (ae matches ä), lemmas first, then meanings |
+| Info | The adjective-ending table, sources and per-item credits (searchable), deck and app versions, the Lizenzen pane (D61) |
 | Feierabend! | Shown when the queue is empty: reviews, average score, new words, streak, coverage change, cards due tomorrow |
 
-Haptics: one short vibration on Weiß ich and a double one on Weiß ich nicht, through the Vibration API of Android's WebView (D40).
+Haptics: one short vibration on Weiß ich and a double one on Weiß ich nicht, through the Vibration API of Android's WebView (D40); Haptik turns it on, off, or leaves it to the phone's touch feedback (D59).
 
 ## Curation tool
 
@@ -575,10 +584,10 @@ Phase 0 unlocks both spikes, and Phase 3 starts only after the coverage report a
   - Full card flow, new words included (D53), undo, dynamic sentence choice, the language button (D35), pause while hidden, haptics; export and import (D52).
   - Done when Vitest covers decay, penalties, bands, undo, pause, queue and replay; export → wipe → import restores identical state; a week of real daily use loses nothing.
 - Phase 6 · Screens and polish
-  - Statistik, Wörter, Suche, Optionen, Thema (Latte and Mocha), Info, word of the day, Feierabend!, reduced motion, font size.
-  - Done when every string is in the i18n files, every screen works one-handed, and attribution is complete.
+  - The pages, panes and controls of D54–D61 as drawn in `docs/mockups.md`: Statistik, Wörter with Suche, Optionen, Info; word of the day, Feierabend!; the backup, privacy, reminder, debug build and icon of D62–D65.
+  - Done when every string is in `strings.ts`, every screen works one-handed, and attribution is complete.
 - Phase 7 · Deploy and data lifecycle
-  - Export nudge, optional weekly refresh with a diff (D41).
+  - Optional weekly refresh with a diff (D41); scheduled exports (D62) replace the export nudge.
   - Done when an APK with a changed deck installs over the old one with progress intact.
 - Phase 8 · Backlog: only on request (see Backlog).
 
