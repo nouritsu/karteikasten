@@ -57,7 +57,7 @@ All 22 decisions are final; D19 was not answered, so it takes the recommended de
 
 ### Amendments
 
-D23–D26 were accepted after Phase 1 on 2026-10-06 (evidence in `reports/phase1-coverage.md`); D27–D39 come from your Phase 2 review on 2026-10-07; D40–D45 from your request for an APK the same day; D46 from your request on 2026-10-15; D47 records your Nix choices, the plain flake and alejandra from Phase 0 on 2026-10-06 and the devenv shell from 2026-10-19; D48–D50 are your choices in Phase 3 on 2026-10-22, D51 your choice at the start of Phase 4 the same day, D52 your choice at the start of Phase 5, and D53 your choice after its first phone test; D54–D65 are your choices on 2026-11-21, bringing over fast-track's design language and features, with the screens drawn in `docs/mockups.md`, and D66 your choice after reviewing them the same day. The sections below are amended where they apply and marked with the decision's id.
+D23–D26 were accepted after Phase 1 on 2026-10-06 (evidence in `reports/phase1-coverage.md`); D27–D39 come from your Phase 2 review on 2026-10-07; D40–D45 from your request for an APK the same day; D46 from your request on 2026-10-15; D47 records your Nix choices, the plain flake and alejandra from Phase 0 on 2026-10-06 and the devenv shell from 2026-10-19; D48–D50 are your choices in Phase 3 on 2026-10-22, D51 your choice at the start of Phase 4 the same day, D52 your choice at the start of Phase 5, and D53 your choice after its first phone test; D54–D65 are your choices on 2026-11-21, bringing over fast-track's design language and features, with the screens drawn in `docs/mockups.md`, D66 your choice after reviewing them the same day, and D67 your idea after using the APK, also that day. The sections below are amended where they apply and marked with the decision's id.
 
 | ID | Topic | Decision |
 | --- | --- | --- |
@@ -105,6 +105,7 @@ D23–D26 were accepted after Phase 1 on 2026-10-06 (evidence in `reports/phase1
 | D64 | Debug build | `nix run .#apk-debug -- --install` installs "Karteikasten (debug)" as `com.nouritsu.karteikasten.debug`, with its own storage, beside the release app. D44's id stays the release app's. |
 | D65 | Launcher icon | fast-track's icon with Material Icons' translate glyph (文A) in place of its fork and spoon (`app/icon.svg`), a monochrome twin for Android's themed icons, and a status-bar icon for the reminder. |
 | D66 | English UI | The app speaks English only, to English speakers learning German: one `strings.ts`, no German UI and no language switch. German is the content: the word, its forms and its sentences. The card's meaning is always the English glosses, and the answer view always adds the sentence's English translation; the German definitions stay in the deck but no longer show. The spec's German names stay as names; the app says Ready!, Know it / Don't know, I was wrong, Next, Done for today!, Score, Cognate, and Card │ Stats │ Words │ Options │ Info. Regular exports read English schedules only. Replaces D20; amends D8, D35 and D54 (no Sprache row). |
+| D67 | Level | Options → Study → Level: Beginner, A1.1, A1.2, A2.1, A2.2, B1.1 or B1.2, at ranks 0, 100, 250, 500, 800, 1,200 and 1,600, a first guess at CEFR from frequency. Words up to the level's rank come as quick checks, 20 a day (a setting), under their own limit; new words start after the rank. A check is a scored card like any other (D53): known, it is Easy and back in about a week, then months; missed, it is learnt. When 48 of the last 50 first answers on the words the next level would cover were known, Done for today suggests it; only you change the level. Your export of 2026-11-21 knew 30 of the first 31 words on sight, missing "sich". |
 
 ## Implementation defaults
 
@@ -446,7 +447,7 @@ Reviews are append-only events in IndexedDB; FSRS card state is derived from the
 Scheduling:
 
 - ts-fsrs (FSRS-6), desired retention 0.9, fuzz on, short-term learning steps per ts-fsrs defaults. Check current API names against its docs.
-- Queue order: words left from an Intro before D53 and never rated, learning and relearning cards due now, then reviews due before the next rollover (oldest first), then new words by rank up to the daily limit (15; a word counts on the day of its first answer). With nothing else left, a learning card due within the learn-ahead window (20 minutes, a setting); otherwise Feierabend, which picks up a card as soon as it comes due.
+- Queue order: words left from an Intro before D53 and never rated, learning and relearning cards due now, then reviews due before the next rollover (oldest first), then the level's checks by rank up to their daily limit (20, D67), then new words by rank past the level up to the daily limit (15; a word counts on the day of its first answer). With nothing else left, a learning card due within the learn-ahead window (20 minutes, a setting); otherwise Feierabend, which picks up a card as soon as it comes due.
 - The day rolls over at 04:00 local time.
 
 Storage and offline:
@@ -506,7 +507,7 @@ The status block, titled Status (D55), carries eleven fields, all dashed during 
 
 | Screen | Contents |
 | --- | --- |
-| Optionen | Thema: Variante (Mocha, Latte, System) and Farben (D58); Anzeige: Schriftgröße, Bewegung, Haptik, Uhr (D59); Lernen: daily new limit, n (up to the deck's `n_max`), desired retention, learn-ahead, audio after answer; Punkte: all score numbers and grade bands; Erinnerung (D63); Sicherung: export and import, one file, regular exports (D62); Privatsphäre: cloud backup (D62) |
+| Optionen | Thema: Variante (Mocha, Latte, System) and Farben (D58); Anzeige: Schriftgröße, Bewegung, Haptik, Uhr (D59); Lernen: Level and checks a day (D67), daily new limit, n (up to the deck's `n_max`), desired retention, learn-ahead, audio after answer; Punkte: all score numbers and grade bands; Erinnerung (D63); Sicherung: export and import, one file, regular exports (D62); Privatsphäre: cloud backup (D62) |
 | Statistik | A span (30 days, 90 days, a year, all, a range) against the span before; Verlauf, Punkte, Behalten, Abdeckung per rank band, Tage (the 12-week heatmap), Rhythmus, Rekorde, Problemwörter; reorder or put away (D60) |
 | Wörter | All n words with rank, lemma, type and status; filters by status, type and gender; the Wort pane with all data and no scoring; actions Kenne ich schon, Pausieren, Zurücksetzen |
 | Suche | Wörter's search field (D54); umlaut-tolerant (ae matches ä), lemmas first, then meanings |

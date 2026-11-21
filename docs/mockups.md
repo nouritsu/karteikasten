@@ -152,6 +152,8 @@ score stay in view above it; tapping them or dragging the pane down closes it.
 
 Done for today, when the queue is empty: the summary scrambles into place under the headline
 (D21). The status fields that belong to a word stay dashed; Today, Due and the rest stay live.
+When 48 of your last 50 first answers on the words the next level would cover were known, two
+more lines suggest that level (D67); nothing changes until you change it in Options.
 
 ```text
 ╭─ Status ─────────────── Wednesday 16:04 ─╮
@@ -164,16 +166,15 @@ Done for today, when the queue is empty: the summary scrambles into place under 
 ╭─ Card ───────────────────────────────────╮
 │                                          │
 │                                          │
-│                                          │
 │             Done for today!              │
 │                                          │
 │        42 reviews · avg score 74         │
+│   You already knew 48 of your last 50    │
+│   new words. Try A2.1? Options → Study   │
 │       6 new words · 12-day streak        │
 │           Coverage 41% → 42% ▲           │
 │                                          │
 │          38 cards due tomorrow.          │
-│                                          │
-│                                          │
 │                                          │
 ├──────────────────────────────────────────┤
 │ ♪ Audio                          ▦ Forms │
@@ -392,17 +393,26 @@ Card │ Stats │ Words │ Options │ Info
                        ‾‾‾‾‾‾‾
 ```
 
-**Study**: the steppers repeat while held and follow a drag across them. **Score** sums up the
+**Study**: **Level** (D67) steps through Beginner, A1.1, A1.2, A2.1, A2.2, B1.1 and B1.2, at
+ranks 0, 100, 250, 500, 800, 1,200 and 1,600. Words up to the level's rank come as quick checks,
+**Checks a day** of them, and new words start after it; at Beginner the Checks row hides. The
+steppers repeat while held and follow a drag across them. **Score** sums up the
 score's numbers (D17, D39), a hint's name and cost kept together; **✎ Edit** turns each into a
 stepper.
 
 ```text
 ╭─ Study ──────────────────────────────────╮
+│ Level          A1.2 · top 250       <  > │
+│ Checks a day   20                   <  > │
 │ New words a day 15                  <  > │
-│ Vocabulary      top 2000            <  > │
-│ Retention       90%                 <  > │
-│ Learn ahead     20 min              <  > │
+│ Vocabulary     top 2000             <  > │
+│ Retention      90%                  <  > │
+│ Learn ahead    20 min               <  > │
 │ Audio after answering             [ on ] │
+│ Words up to #250 come as quick checks,   │
+│ 20 a day. Know one and it comes back in  │
+│ a week, then months; miss one and you    │
+│ learn it. New words start at #251.       │
 │ With nothing else due, a card still      │
 │ being learnt comes up this early.        │
 ╰──────────────────────────────────────────╯

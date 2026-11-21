@@ -1,6 +1,6 @@
 # Phase 6 report: screens, in fast-track's design language
 
-2026-11-21. The app has fast-track's shell and controls, and the Phase 6 screens are built in them. The decisions are D54–D66, your choices from this session; `docs/mockups.md` draws every page and pane.
+2026-11-21. The app has fast-track's shell and controls, and the Phase 6 screens are built in them. The decisions are D54–D67, your choices from this session; `docs/mockups.md` draws every page and pane.
 
 **After your review.** You asked for an English-only UI, aimed at English speakers learning German, written as plain English rather than translated from the German.
 - **One language (D66).** One `strings.ts` replaces the German and English string files. The language row in Display and the shuffle between languages are gone.
@@ -21,22 +21,17 @@ You also asked for fixes to the spacing, mostly on Stats:
   - Info puts each source's licence on its own line.
   - Score's summary and a word's credits break only between their parts.
 
+**After using the APK.** You built and installed it, and everything works. Your export from that day (65 events on four days, 22 Oct to 13 Nov) shows you knew 30 of the first 31 words on sight, nearly all at 100 points within two seconds; only "sich" (#29) was new to you. At 15 new words a day, in rank order, a month of now-and-then study had reached only #31. So the app now has a level (D67):
+- **Level** in Options → Study: Beginner, A1.1, A1.2, A2.1, A2.2, B1.1, B1.2, at ranks 0, 100, 250, 500, 800, 1,200 and 1,600, a first guess at CEFR from frequency.
+- **Checks:** words up to the level come as quick checks, 20 a day (Checks a day), under their own limit. New words start right after the level.
+- **What a check does:** it is a normal scored card. Known, it is rated Easy and comes back in about a week, then months; missed, it is learnt like any new word.
+- **Nudge:** when 48 of your last 50 first answers on the words the next level would cover were known, Done for today suggests that level. It never changes the level itself. Your history has 31 first answers so far, so it waits for 19 more before it can suggest A1.1.
+
 **Needs you:**
 
-0. **The APK has not been built yet.** cache.nixos.org kept dropping the download of Gradle 8.14.4 here, and the APK needs it. The web build passes in Nix, but the new Java (the `Native` and `SystemPrefs` plugins, the alarm receiver, the backup agent) has not been through a compiler. If the cache misbehaves for you too, `NIX_CONFIG="substituters = https://cache.nixos.org"` skips the unreachable attic cache; don't use `--fallback`, which starts rebuilding the compilers from source.
-1. **Install the debug build beside your real app** and try it, so your review history stays untouched:
-
-   ```
-   nix run .#apk-debug -- --install
-   ```
-
-   It shows up as "Karteikasten (debug)", with its own storage. To try it on your own history, export from the real app and import into the debug one.
-2. **On the phone, check what the browser cannot:**
-   - Options → Reminder on: Android asks once for notifications. The reminder comes at the time set, with the app closed too, and goes away when you open the app.
-   - Options → Backup → Export on a schedule, with a time a few minutes ahead: the file lands in `Documents/Karteikasten/`, and the block's last line says so.
-   - Options → Display set to System: Text size, Motion, Haptics and Clock follow Android's settings.
-   - The new icon: on the home screen, and in its themed (monochrome) form if you use themed icons.
-3. **Then install it as the real app** (`nix run .#apk -- --install`) once you're happy. It updates in place and keeps your history.
+1. **Rebuild and install** for the level, `nix run .#apk-debug -- --install` first if you like, then `nix run .#apk -- --install` for the real app. Nothing changed on the Android side, and the real app updates in place with your history.
+2. **Set your level** in Options → Study and watch the checks come: words up to its rank first, a check a card, then new words past it.
+3. **Phase 5's week of daily use** still stands: the done criterion only you can check.
 
 ## What changed
 
@@ -84,13 +79,13 @@ The spec keeps its German names for screens and buttons (Karte, Bereit, Feierabe
 
 ## Tests and checks
 
-- **Vitest:** 92 pass (58 before), with new tests for the schedule parser, the reminder planner, Stats' numbers, the Words search, the theme choice and drags.
+- **Vitest:** 97 pass (58 before), with new tests for the schedule parser, the reminder planner, Stats' numbers, the Words search, the theme choice, drags, and the level's queue, limits and nudge.
 - **`svelte-check`:** clean.
 - **In the browser** (390 × 844, with six weeks of made-up reviews in the browser's own database):
   - Every page renders in English, and the tabs and the Forms and Word panes work.
   - Colours steps the accent, Flavour switches the theme, and Stats draws and reads its charts.
   - Words finds "strasse" as Straße, and Sources lists Hand's credits.
   - An answered card shows the English meaning and the sentence's translation.
-- **Nix:** the web build (`karteikasten-app`) and the debug APK's evaluation pass, and alejandra is clean; the APK itself is not built (above).
-- **Not yet checked:** anything only Android does (the plugins, alarms, notifications, the backup agent and the icons), and the day's summary on a real day's end.
+- **Nix:** the web build and alejandra pass; you built and ran the APK on the phone, and everything works.
+- **Not yet checked by me:** the level on the phone, and the nudge on a real day's end (both covered by tests).
 - **Not built:** the word of the day, which has no design yet.
