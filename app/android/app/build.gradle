@@ -10,6 +10,7 @@ android {
         // nix/apk.nix passes both (D45).
         versionCode Integer.parseInt(findProperty('versionCode') ?: '1')
         versionName findProperty('versionName') ?: '0.0.0-dev'
+        manifestPlaceholders = [appLabel: '@string/app_name']
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
              // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
@@ -19,6 +20,12 @@ android {
     buildTypes {
         release {
             minifyEnabled false
+            // nix/apk.nix's debug build (-PdebugApp, D64) installs beside the release one:
+            // its own id, so its own storage, and its own name.
+            if (findProperty('debugApp')) {
+                applicationIdSuffix '.debug'
+                manifestPlaceholders = [appLabel: 'Karteikasten (debug)']
+            }
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }

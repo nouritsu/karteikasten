@@ -10,7 +10,14 @@ public class MainActivity extends BridgeActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        // Exports, reminders and cloud backup (Native), and the phone settings Display can
+        // follow (SystemPrefsPlugin); registered before the bridge starts.
+        registerPlugin(Native.class);
+        registerPlugin(SystemPrefsPlugin.class);
         super.onCreate(savedInstanceState);
+        // The app sizes its own text, from the phone's font scale or Text size
+        // (src/lib/display.ts), so the WebView must not scale it again.
+        getBridge().getWebView().getSettings().setTextZoom(100);
         preferFastestRefreshRate();
     }
 
