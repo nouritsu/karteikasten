@@ -62,6 +62,8 @@
         assets = app-assets;
         web = app;
       };
+      # Installs beside the release app as "Karteikasten (debug)", with its own storage (D64).
+      apk-debug = apk.override {debugApp = true;};
       # `nix run .#curate` from the working tree: it reads data/work and writes overrides/.
       curate = pkgs.callPackage ./nix/curate.nix {};
       pipeline = pkgs.callPackage ./nix/pipeline.nix {};
@@ -101,6 +103,15 @@
           flake = self;
         });
         meta.description = "Bundle a deck into the APK, sign it with the debug key, and optionally adb install it";
+      };
+      apk-debug = {
+        type = "app";
+        program = lib.getExe (pkgs.callPackage ./nix/apk-app.nix {
+          apk = own.apk-debug;
+          package = "apk-debug";
+          flake = self;
+        });
+        meta.description = "The same for the debug build, which installs beside the release app with its own storage";
       };
     });
 

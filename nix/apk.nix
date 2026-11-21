@@ -15,7 +15,11 @@
   # One deck version directory (data/dist/deck/<version>), bundled at /deck/ (D41).
   bundledDeck ? ./stub-deck,
   versionCode ? 1,
+  # A build that installs beside the release one, as "Karteikasten (debug)" with its own
+  # id and storage (D64; app/android/app/build.gradle): `nix run .#apk-debug -- --install`.
+  debugApp ? false,
 }: let
+  name = "karteikasten${lib.optionalString debugApp "-debug"}";
   buildToolsVersion = "35.0.0"; # AGP 8.13's default; any other makes it reach for the network
   android = androidenv.composeAndroidPackages {
     platformVersions = ["36"];
@@ -29,7 +33,7 @@
   deckVersion = (lib.importJSON "${bundledDeck}/manifest.json").deck_version;
 in
   stdenv.mkDerivation (finalAttrs: {
-    pname = "karteikasten-apk";
+    pname = "${name}-apk";
     version = "${(lib.importJSON ../app/package.json).version}+${deckVersion}";
     src = ../app;
 
@@ -48,18 +52,21 @@ in
     };
 
     ANDROID_HOME = sdk;
-    gradleFlags = [
-      "-Dorg.gradle.java.home=${jdk21}"
-      # The aapt2 AGP fetches from Maven is linked for FHS systems and fails on NixOS.
-      "-Pandroid.aapt2FromMavenOverride=${sdk}/build-tools/${buildToolsVersion}/aapt2"
-      "-PversionCode=${toString versionCode}"
-      "-PversionName=${finalAttrs.version}"
-      # Release lint looks up newer library versions in Google's Maven indexes and the
-      # Play SDK index. Those files change upstream every few days, so pinning them in
-      # apk-deps.json broke the build within a week each time.
-      "-x"
-      "lintVitalRelease"
-    ];
+    gradleFlags =
+      [
+        "-Dorg.gradle.java.home=${jdk21}"
+        # The aapt2 AGP fetches from Maven is linked for FHS systems and fails on NixOS.
+        "-Pandroid.aapt2FromMavenOverride=${sdk}/build-tools/${buildToolsVersion}/aapt2"
+        "-PversionCode=${toString versionCode}"
+        "-PversionName=${finalAttrs.version}"
+        # Release lint looks up newer library versions in Google's Maven indexes and the
+        # Play SDK index. Those files change upstream every few days, so pinning them in
+        # apk-deps.json broke the build within a week each time.
+        "-x"
+        "lintVitalRelease"
+      ]
+      # Only when wanted: Gradle reads any value, "false" too, as set.
+      ++ lib.optional debugApp "-PdebugApp=true";
     gradleBuildTask = "assembleRelease";
     # Android variants make the default nixDownloadDeps ambiguous; record a real build.
     gradleUpdateTask = finalAttrs.gradleBuildTask;
@@ -78,7 +85,7 @@ in
     installPhase = ''
       runHook preInstall
       install -Dm644 app/build/outputs/apk/release/app-release-unsigned.apk \
-        $out/karteikasten-${finalAttrs.version}-unsigned.apk
+        $out/${name}-${finalAttrs.version}-unsigned.apk
       runHook postInstall
     '';
 

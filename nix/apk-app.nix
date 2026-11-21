@@ -1,7 +1,8 @@
 # `nix run .#apk -- [--deck VERSION] [--version-code N] [--install]` (D42, D43, D45).
 # data/ is gitignored, so this runs against the working tree: it bundles a deck from
 # data/dist/deck into the flake's apk package, signs the result with this machine's
-# Android debug key, and writes it to data/dist/apk/.
+# Android debug key, and writes it to data/dist/apk/. `nix run .#apk-debug` does the
+# same for the debug build, which installs beside the release app (D64).
 {
   lib,
   stdenv,
@@ -13,8 +14,10 @@
   jq,
   apk,
   flake,
+  # The flake package to bundle the deck into: apk, or apk-debug.
+  package ? "apk",
 }:
-writers.writeFishBin "karteikasten-apk" ''
+writers.writeFishBin "karteikasten-${package}" ''
   argparse 'deck=' 'version-code=' install -- $argv; or exit 2
   set -gx PATH ${lib.makeBinPath [android-tools coreutils git jdk21 jq]} ${apk.sdk}/build-tools/35.0.0 $PATH
 
@@ -43,7 +46,7 @@ writers.writeFishBin "karteikasten-apk" ''
   end
 
   set -l built (nix build --no-link --print-out-paths --impure --expr "
-    (builtins.getFlake \"path:${flake}\").packages.${stdenv.hostPlatform.system}.apk.override {
+    (builtins.getFlake \"path:${flake}\").packages.${stdenv.hostPlatform.system}.${package}.override {
       bundledDeck = builtins.path { path = /. + \"$decks/$deck\"; name = \"karteikasten-deck\"; };
       versionCode = $code;
     }"); or exit 1

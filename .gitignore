@@ -13,9 +13,10 @@ result-*
 # App
 node_modules/
 /app/dist/
-# Generated (nix build .#app-assets) and the local deck for development.
+# Generated (nix build .#app-assets), the local deck and the notices for development.
 /app/public/generated
 /app/public/deck
+/app/public/THIRD_PARTY_NOTICES.md
 
 # Curation tool
 target/
