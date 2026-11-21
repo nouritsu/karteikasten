@@ -56,11 +56,14 @@
       app = pkgs.callPackage ./nix/app.nix {assets = app-assets;};
       # Font subset and icons; in development: nix build .#app-assets -o app/public/generated
       app-assets = pkgs.callPackage ./nix/app-assets.nix {};
-      # Unsigned, with an empty deck unless overridden; `nix run .#apk` bundles the
-      # working tree's deck and signs it.
+      # Unsigned, with the pinned deck; `nix run .#apk` signs it, and can bundle the
+      # working tree's deck instead.
       apk = androidPkgs.callPackage ./nix/apk.nix {
         assets = app-assets;
         web = app;
+        # The public deck nix/deck.json pins, uploaded as a GitHub release (D68); the stub
+        # deck until one is pinned.
+        bundledDeck = pkgs.callPackage ./nix/deck.nix {};
       };
       # Installs beside the release app as "Karteikasten (debug)", with its own storage (D64).
       apk-debug = apk.override {debugApp = true;};
@@ -102,7 +105,7 @@
           inherit (own) apk;
           flake = self;
         });
-        meta.description = "Bundle a deck into the APK, sign it with the debug key, and optionally adb install it";
+        meta.description = "Build the APK, sign it with a release key or the debug key, and optionally adb install it";
       };
       apk-debug = {
         type = "app";
@@ -112,6 +115,11 @@
           flake = self;
         });
         meta.description = "The same for the debug build, which installs beside the release app with its own storage";
+      };
+      deck-release = {
+        type = "app";
+        program = lib.getExe (pkgs.callPackage ./nix/deck-release.nix {});
+        meta.description = "Pack a public deck, upload it as a GitHub release, and pin it in nix/deck.json";
       };
     });
 
@@ -202,8 +210,9 @@
       # Building the package runs `cargo test`.
       inherit (own) curate;
 
-      # With the stub deck: Gradle still builds offline from nix/apk-deps.json.
-      inherit (own) apk;
+      # With the stub deck, so a check never fetches the real one: Gradle still builds
+      # offline from nix/apk-deps.json.
+      apk = own.apk.override {bundledDeck = ./nix/stub-deck;};
 
       curate-clippy = own.curate.overrideAttrs (old: {
         pname = "${old.pname}-clippy";

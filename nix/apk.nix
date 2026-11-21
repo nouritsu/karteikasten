@@ -1,6 +1,6 @@
 # The Android APK (D40–D42): the web build and one deck in Capacitor's WebView shell,
-# built by Gradle offline. The output is unsigned; `nix run .#apk` signs it with the
-# machine's debug key (D43), so no key ever enters the store.
+# built by Gradle offline. The output is unsigned; `nix run .#apk` signs it with a release
+# key or this machine's debug key (D43, D68), so no key ever enters the store.
 # After changing Capacitor, AGP or Gradle: nix build .#apk.mitmCache.updateScript && ./result
 {
   lib,
@@ -12,9 +12,9 @@
   jdk21,
   nodejs,
   web,
-  # One deck version directory (data/dist/deck/<version>), bundled at /deck/ (D41).
+  # One deck version directory, bundled at /deck/ (D41): the deck nix/deck.json pins
+  # (nix/deck.nix), the stub for checks, or one from data/dist/deck (nix run .#apk -- --deck).
   bundledDeck ? ./stub-deck,
-  versionCode ? 1,
   # A build that installs beside the release one, as "Karteikasten (debug)" with its own
   # id and storage (D64; app/android/app/build.gradle): `nix run .#apk-debug -- --install`.
   debugApp ? false,
@@ -31,10 +31,22 @@
   };
   sdk = "${android.androidsdk}/libexec/android-sdk";
   deckVersion = (lib.importJSON "${bundledDeck}/manifest.json").deck_version;
+
+  # versionCode = MAJOR*10000 + MINOR*100 + PATCH, so 0.2.0 is 200 (D68). Android installs
+  # an update only over a lower code, so bumping the version in package.json is all a
+  # release needs. A new deck comes with a new version.
+  appVersion = (lib.importJSON ../app/package.json).version;
+  versionParts = builtins.match "(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)" appVersion;
+  versionCode = let
+    part = n: lib.toInt (builtins.elemAt versionParts n);
+  in
+    assert lib.assertMsg (versionParts != null) "app/package.json: version must be plain X.Y.Z, got \"${appVersion}\"";
+    assert lib.assertMsg (part 1 < 100 && part 2 < 100) "app/package.json: MINOR and PATCH must stay below 100, got ${appVersion}";
+      part 0 * 10000 + part 1 * 100 + part 2;
 in
   stdenv.mkDerivation (finalAttrs: {
     pname = "${name}-apk";
-    version = "${(lib.importJSON ../app/package.json).version}+${deckVersion}";
+    version = "${appVersion}+${deckVersion}";
     src = ../app;
 
     npmDeps = importNpmLock {npmRoot = ../app;};
@@ -89,7 +101,13 @@ in
       runHook postInstall
     '';
 
-    passthru = {inherit deckVersion sdk;};
+    # The signed APK's name in out/apk/ (nix/apk-app.nix): the app's version, without the deck's.
+    passthru = {
+      inherit deckVersion sdk buildToolsVersion versionCode;
+      signedName = "${name}-${appVersion}.apk";
+    };
+
+    meta.license = lib.licenses.gpl3Plus;
 
     meta.sourceProvenance = with lib.sourceTypes; [
       fromSource

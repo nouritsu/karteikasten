@@ -13,6 +13,8 @@ result-*
 # App
 node_modules/
 /app/dist/
+# Signed APKs and deck tarballs: nix run .#apk, nix run .#deck-release
+/out/
 # Generated (nix build .#app-assets), the local deck and the notices for development.
 /app/public/generated
 /app/public/deck
