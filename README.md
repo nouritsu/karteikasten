@@ -34,6 +34,8 @@ sha256sum -c SHA256SUMS
 gh attestation verify karteikasten-<version>.apk --repo nouritsu/karteikasten
 ```
 
+The APK is signed with certificate SHA-256 `85a63ccd2f83e254da9e920d6fdaa8df8a2ffad4557332cdbbb581adbeebaaa5`, the same key as the F-Droid repo's APKs, so you can switch between the two.
+
 ### Build from source
 
 The build needs [Nix](https://nixos.org/download) with flakes, on x86_64 Linux.
