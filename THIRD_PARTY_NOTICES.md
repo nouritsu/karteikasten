@@ -1,9 +1,11 @@
 # Third-party notices
 
-Karteikasten bundles the components below under their own licences, and a deck built
-from openly licensed data. The MIT, ISC and Apache 2.0 licences follow the list; the
-font's SIL Open Font License 1.1 ships beside it, in generated/fonts/. Info → Quellen
-credits every recording and sentence in the deck by name.
+Karteikasten is free software under the GNU General Public License, version 3 or any
+later version (LICENSE); its deck is under CC BY-SA 4.0. It bundles the components below
+under their own licences, and a deck built from openly licensed data. The MIT, ISC and
+Apache 2.0 licences follow the list; the font's SIL Open Font License 1.1 ships beside
+it, in generated/fonts/. Info → Sources credits every recording and sentence in the
+deck by name.
 
 ## In the app
 
@@ -35,9 +37,9 @@ credits every recording and sentence in the deck by name.
 - Wiktionary, through Kaikki (wiktextract): CC BY-SA 4.0 and GFDL.
   Meanings, forms, pronunciation and etymology from the English and German editions.
 - Tatoeba: CC BY 2.0 FR (some CC0). Each sentence and translation is credited to its
-  author in Info → Quellen. https://tatoeba.org
+  author in Info → Sources. https://tatoeba.org
 - Wikimedia Commons: each recording under its own licence, credited to its author in
-  Info → Quellen. https://commons.wikimedia.org
+  Info → Sources. https://commons.wikimedia.org
 - Leipzig Corpora Collection: CC BY 4.0. Word counts only.
 - FrequencyWords (OpenSubtitles 2018): CC BY-SA 4.0. Word counts only.
 - Universal Dependencies German GSD and HDT: CC BY-SA 4.0. Ratios only.

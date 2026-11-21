@@ -55,7 +55,6 @@
 
     <!-- Permissions -->
 
-    <uses-permission android:name="android.permission.INTERNET" />
     <!-- navigator.vibrate on Weiß ich and Weiß ich nicht, and the steppers' tick -->
     <uses-permission android:name="android.permission.VIBRATE" />
     <!-- Export writes Documents/Karteikasten/. Android 11 and newer need no permission
