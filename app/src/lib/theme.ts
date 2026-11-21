@@ -1,11 +1,16 @@
-// Catppuccin Latte (light) and Mocha (dark), with mauve as the accent. index.html
-// sets the first theme before the page paints: the saved choice, else Mocha.
-// Thema switches between them and saves the choice.
+// Catppuccin Latte (light) and Mocha (dark), the accent mauve unless picked otherwise
+// (D30, D58). index.html sets the first theme before the page paints: the saved choice,
+// else Mocha. Options' Flavour steps through Mocha, Latte and System, which shows
+// whichever the device is in, and saves the choice.
 
 import { Capacitor, SystemBars, SystemBarsStyle } from '@capacitor/core'
+import { reducedMotion } from './ui/motion'
 
 export type Theme = 'latte' | 'mocha'
-export const THEMES: Theme[] = ['latte', 'mocha']
+export type ThemeChoice = Theme | 'system'
+export const THEME_CHOICES: ThemeChoice[] = ['mocha', 'latte', 'system']
+
+const DARK = '(prefers-color-scheme: dark)'
 
 const LEAD_MS = 150 // the button shows the new theme this long before the page follows
 const GROW_MS = 650
@@ -19,13 +24,42 @@ export function currentTheme(): Theme {
   return document.documentElement.dataset.theme === 'latte' ? 'latte' : 'mocha'
 }
 
-export function applyTheme(theme: Theme): void {
+/** The theme a choice shows: System follows the device. */
+export function shownTheme(choice: ThemeChoice, dark: boolean): Theme {
+  return choice === 'system' ? (dark ? 'mocha' : 'latte') : choice
+}
+
+export const systemDark = (): boolean => matchMedia(DARK).matches
+
+/** Calls `onChange` when the device goes from light to dark or back. Returns a function that stops. */
+export function watchSystem(onChange: () => void): () => void {
+  const query = matchMedia(DARK)
+  query.addEventListener('change', onChange)
+  return () => query.removeEventListener('change', onChange)
+}
+
+export function savedChoice(): ThemeChoice {
+  try {
+    const saved = localStorage.getItem('theme')
+    return saved === 'latte' || saved === 'system' ? saved : 'mocha'
+  } catch {
+    return 'mocha'
+  }
+}
+
+function applyTheme(theme: Theme): void {
   document.documentElement.dataset.theme = theme
 }
 
-/** The phone's status bar follows the theme: in the app the page shows through
- *  it and its icons turn light on Mocha, dark on Latte; in a browser it takes
- *  the theme's background. */
+/** Shows `theme` at once, with no reveal. */
+export function setTheme(theme: Theme): void {
+  applyTheme(theme)
+  paintStatusBar()
+}
+
+/** The system bars follow the theme: in the app the page shows through them and
+ *  their icons turn light on Mocha, dark on Latte; in a browser the bar takes the
+ *  theme's background. */
 export function paintStatusBar(): void {
   if (Capacitor.isNativePlatform()) {
     const style = currentTheme() === 'mocha' ? SystemBarsStyle.Dark : SystemBarsStyle.Light
@@ -36,14 +70,17 @@ export function paintStatusBar(): void {
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', background)
 }
 
-export function saveTheme(theme: Theme): void {
-  localStorage.setItem('theme', theme)
+export function saveTheme(choice: ThemeChoice): void {
+  try {
+    localStorage.setItem('theme', choice)
+  } catch {
+    // no storage: the choice lasts until the page closes
+  }
 }
 
 /** The reveal's keyframes, sampled along its cubic-bezier easing (offsets from the
  *  curve's x, progress from its y): the circle's scale, and its inverse for the
- *  view inside it, so the view stays put. Both scales are linear between
- *  keyframes, where the view drifts by less than a pixel. */
+ *  view inside it, so the view stays put. */
 export function revealFrames(grow: boolean): { circle: Keyframe[]; view: Keyframe[] } {
   const [x1, y1, x2, y2] = grow ? GROW_EASING : SHRINK_EASING
   const bezier = (p1: number, p2: number, u: number) => 3 * (1 - u) ** 2 * u * p1 + 3 * (1 - u) * u ** 2 * p2 + u ** 3
@@ -59,17 +96,12 @@ export function revealFrames(grow: boolean): { circle: Keyframe[]; view: Keyfram
   return { circle, view }
 }
 
-/** Switches to `theme` from the button `origin` (D37): the button takes the new
- *  theme first, then a Latte circle grows from it, or the Latte view shrinks
- *  into it and goes out. Without view transitions, or with reduced motion, the
- *  switch is instant. */
+/** Switches to `theme` from the button `origin` (D37): the button takes the new theme
+ *  first, then a Latte circle grows from it, or the Latte view shrinks into it and
+ *  goes out. Without view transitions, or with reduced motion, the switch is instant. */
 export async function revealTheme(theme: Theme, origin: HTMLElement): Promise<void> {
   const root = document.documentElement
-  if (!document.startViewTransition || matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    applyTheme(theme)
-    paintStatusBar()
-    return
-  }
+  if (!document.startViewTransition || reducedMotion()) return setTheme(theme)
 
   const start = performance.now()
   const page = document.body.getBoundingClientRect()
@@ -95,11 +127,9 @@ export async function revealTheme(theme: Theme, origin: HTMLElement): Promise<vo
     await transition.ready
     const delay = Math.max(0, LEAD_MS - (performance.now() - start))
     const frames = revealFrames(grow)
-    // fill holds the first keyframe through the delay, and the last until the
-    // transition is torn down; without it the last frame shows the whole old
-    // Latte view again. The animations also keep the transition alive through
-    // the delay. They are cancelled afterwards, or they would scale the next
-    // switch's snapshots too.
+    // fill holds the first keyframe through the delay and the last until the
+    // transition is torn down. The animations are cancelled afterwards, or they
+    // would scale the next switch's snapshots too.
     const timing = { duration: grow ? GROW_MS : SHRINK_MS, delay, fill: 'both' } as const
     animations.push(
       root.animate(frames.circle, { ...timing, pseudoElement: '::view-transition-image-pair(latte)' }),

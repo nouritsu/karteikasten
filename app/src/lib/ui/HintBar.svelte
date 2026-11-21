@@ -1,8 +1,9 @@
 <script lang="ts">
   import type { Hint } from '../engine/score'
-  import { i18n } from '../i18n/index.svelte'
+  import { strings } from '../strings'
   import type { Phase } from '../session.svelte'
   import type { DeckWord } from '../types'
+  import Icon, { type IconName } from './Icon.svelte'
   import ShuffleText from './ShuffleText.svelte'
 
   let {
@@ -19,12 +20,12 @@
     onHint: (hint: Hint) => boolean
   } = $props()
 
-  // Unicode symbols drawn by the app font (nix/app-assets.nix keeps them in the subset).
-  const ICONS: Record<Hint, string> = {
-    audio: '♪',
-    forms: '▦',
-    sentence: '¶',
-    cognate: '⚯',
+  // Material Icons (D57).
+  const ICONS: Record<Hint, IconName> = {
+    audio: 'volume_up',
+    forms: 'table_chart',
+    sentence: 'notes',
+    cognate: 'link',
   }
   const ORDER: Hint[] = ['audio', 'forms', 'sentence', 'cognate']
   // Buttons show no costs. A press that costs points shuffles the label into its
@@ -62,11 +63,9 @@
       disabled={phase === 'ready' || phase === 'reveal' || phase === 'done' || !available(hint)}
       onclick={() => press(hint)}
     >
-      <!-- Keyed by language: a language switch swaps the label at once; only the
-           deduction shuffles. -->
-      <span class="icon" aria-hidden="true">{ICONS[hint]}</span>{#key i18n.lang}<ShuffleText
-          text={flashing.includes(hint) ? `-${penalties[hint]}` : i18n.t.hints[hint]}
-        />{/key}
+      <span class="icon" aria-hidden="true"><Icon name={ICONS[hint]} /></span><ShuffleText
+          text={flashing.includes(hint) ? `-${penalties[hint]}` : strings.hints[hint]}
+        />
     </button>
   {/each}
 </div>

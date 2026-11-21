@@ -1,5 +1,5 @@
 // The card flip (D38): answering and Weiter turn the card over. A scan line carries
-// the Karte title to the right edge, shuffling it into its mirror image, and the
+// the Card title to the right edge, shuffling it into its mirror image, and the
 // back (the author's name) comes in behind it, every character scrambling as the
 // line passes. After a hold, the line carries the title back to the left and the
 // new front comes in behind it.
@@ -20,7 +20,7 @@ export function flips(from: Phase, to: Phase): boolean {
   return from === 'answered' && (to === 'ready' || to === 'done')
 }
 
-/** The title as seen from the back: Karte → etraK. */
+/** The title as seen from the back: Card → etraK. */
 export function mirrored(title: string): string {
   return [...title].reverse().join('')
 }

@@ -1,7 +1,7 @@
 // Turns a word's key forms into the short lines the card shows. Only data from
-// the deck is arranged here; the labels come from the i18n strings.
+// the deck is arranged here; the labels come from strings.ts.
 
-import type { Strings } from '../i18n/de'
+import type { Strings } from '../strings'
 import type { DeckWord } from '../types'
 
 const AUX_3SG: Record<string, string> = { haben: 'hat', sein: 'ist' }

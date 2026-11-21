@@ -1,13 +1,14 @@
 <script lang="ts">
   import { typingDelay, typingPieces } from '../engine/typing'
+  import { reducedMotion } from './motion'
 
-  // A sentence typed out left to right (the Satz hint), its highlighted word kept.
+  // A sentence typed out left to right (the Sentence hint), its highlighted word kept.
   let { text, hl, animate = true }: { text: string; hl: [number, number]; animate?: boolean } = $props()
   let typed = $state(0)
 
   $effect(() => {
     const length = text.length
-    if (!animate || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    if (!animate || reducedMotion()) {
       typed = length
       return
     }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { de } from '../i18n/de'
+import { strings } from '../strings'
 import type { DeckWord } from '../types'
 import { genderClass, keyFormLines } from './format'
 
@@ -16,13 +16,13 @@ function word(partial: Partial<DeckWord>): DeckWord {
 describe('key form lines', () => {
   it('shows plural and genitive with articles', () => {
     const hand = word({ lemma: 'Hand', gender: 'f', article: 'die', key_forms: { plural: 'Hände', genitive: 'Hand' } })
-    expect(keyFormLines(hand, de)).toEqual(['Pl. die Hände', 'Gen. der Hand'])
+    expect(keyFormLines(hand, strings)).toEqual(['pl. die Hände', 'gen. der Hand'])
   })
 
   it('marks plural-only and weak nouns', () => {
-    expect(keyFormLines(word({ flags: ['plural_only'] }), de)).toEqual(['nur Plural'])
+    expect(keyFormLines(word({ flags: ['plural_only'] }), strings)).toEqual(['plural only'])
     const junge = word({ gender: 'm', key_forms: { plural: 'Jungen', genitive: 'Jungen' }, flags: ['weak_noun'] })
-    expect(keyFormLines(junge, de)).toEqual(['Pl. die Jungen', 'Gen. des Jungen', 'schwach dekliniert'])
+    expect(keyFormLines(junge, strings)).toEqual(['pl. die Jungen', 'gen. des Jungen', 'weak noun'])
   })
 
   it('shows verb forms with both auxiliaries', () => {
@@ -30,25 +30,25 @@ describe('key form lines', () => {
       lemma: 'fahren', pos: 'verb', flags: ['strong'],
       key_forms: { er: 'fährt', du: 'fährst', praeteritum: 'fuhr', partizip2: 'gefahren', auxiliary: ['haben', 'sein'] },
     })
-    expect(keyFormLines(fahren, de)).toEqual(['er fährt · du fährst', 'Prät. fuhr · Perf. hat/ist gefahren · stark'])
+    expect(keyFormLines(fahren, strings)).toEqual(['er fährt · du fährst', 'past fuhr · perfect hat/ist gefahren · strong'])
   })
 
   it('shows comparison, case and conjunction type', () => {
-    expect(keyFormLines(word({ lemma: 'gut', pos: 'adj', key_forms: { comparative: 'besser', superlative: 'am besten' } }), de))
+    expect(keyFormLines(word({ lemma: 'gut', pos: 'adj', key_forms: { comparative: 'besser', superlative: 'am besten' } }), strings))
       .toEqual(['gut · besser · am besten'])
-    expect(keyFormLines(word({ pos: 'prep', key_forms: { case: 'two-way', cases: ['acc', 'dat'] } }), de))
-      .toEqual(['mit Akk/Dat (Wechselpräposition)'])
-    expect(keyFormLines(word({ pos: 'prep', key_forms: { case: 'gen', cases: ['gen', 'dat'] } }), de)).toEqual(['mit Gen / Dat'])
-    expect(keyFormLines(word({ pos: 'conj', key_forms: { conjunction: 'subordinating' } }), de))
-      .toEqual(['unterordnend (Verb am Ende)'])
+    expect(keyFormLines(word({ pos: 'prep', key_forms: { case: 'two-way', cases: ['acc', 'dat'] } }), strings))
+      .toEqual(['takes acc or dat (two-way)'])
+    expect(keyFormLines(word({ pos: 'prep', key_forms: { case: 'gen', cases: ['gen', 'dat'] } }), strings)).toEqual(['takes gen / dat'])
+    expect(keyFormLines(word({ pos: 'conj', key_forms: { conjunction: 'subordinating' } }), strings))
+      .toEqual(['subordinating: the verb goes last'])
   })
 
   it('shows the modal class, contractions and ordinals', () => {
     const koennen = word({ pos: 'verb', flags: ['modal'], key_forms: { er: 'kann', praeteritum: 'konnte' } })
-    expect(keyFormLines(koennen, de)).toEqual(['er kann', 'Prät. konnte · Modalverb'])
+    expect(keyFormLines(koennen, strings)).toEqual(['er kann', 'past konnte · modal verb'])
     const in_ = word({ pos: 'prep', key_forms: { case: 'two-way', cases: ['acc', 'dat'], contractions: ['im', 'ins'] } })
-    expect(keyFormLines(in_, de)).toEqual(['mit Akk/Dat (Wechselpräposition)', 'Kurzformen: im, ins'])
-    expect(keyFormLines(word({ pos: 'num', key_forms: { ordinal: 'zweite' } }), de)).toEqual(['Ordinalzahl: zweite'])
+    expect(keyFormLines(in_, strings)).toEqual(['takes acc or dat (two-way)', 'contractions: im, ins'])
+    expect(keyFormLines(word({ pos: 'num', key_forms: { ordinal: 'zweite' } }), strings)).toEqual(['ordinal: zweite'])
   })
 
   it('colours articles by gender, plural-only in its own colour', () => {

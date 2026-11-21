@@ -1,9 +1,44 @@
-import { describe, expect, it } from 'vitest'
-import { revealFrames } from './theme'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { revealFrames, savedChoice, shownTheme, THEME_CHOICES } from './theme'
 
 const scale = (frame: Keyframe) => Number(/^scale\((.+)\)$/.exec(String(frame.transform))?.[1])
 
-describe('Thema reveal', () => {
+describe('theme choice', () => {
+  afterEach(() => vi.unstubAllGlobals())
+
+  it('cycles through Mocha, Latte and System', () => {
+    expect(THEME_CHOICES).toEqual(['mocha', 'latte', 'system'])
+  })
+
+  it('shows the chosen theme, and System as the device is', () => {
+    expect(shownTheme('mocha', false)).toBe('mocha')
+    expect(shownTheme('latte', true)).toBe('latte')
+    expect(shownTheme('system', true)).toBe('mocha')
+    expect(shownTheme('system', false)).toBe('latte')
+  })
+
+  it.each([
+    [null, 'mocha'],
+    ['mocha', 'mocha'],
+    ['latte', 'latte'],
+    ['system', 'system'],
+    ['dark', 'mocha'],
+  ])('reads %s back as %s', (saved, choice) => {
+    vi.stubGlobal('localStorage', { getItem: () => saved })
+    expect(savedChoice()).toBe(choice)
+  })
+
+  it('falls back to Mocha without storage', () => {
+    vi.stubGlobal('localStorage', {
+      getItem: () => {
+        throw new Error('blocked')
+      },
+    })
+    expect(savedChoice()).toBe('mocha')
+  })
+})
+
+describe('theme reveal', () => {
   it.each([
     ['grows', true, 0, 1],
     ['shrinks', false, 1, 0],

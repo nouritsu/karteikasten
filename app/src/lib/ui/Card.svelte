@@ -1,7 +1,7 @@
 <script lang="ts">
   import { tick, untrack } from 'svelte'
   import type { Hint } from '../engine/score'
-  import { i18n } from '../i18n/index.svelte'
+  import { strings } from '../strings'
   import type { Phase, Session } from '../session.svelte'
   import type { DeckWord, Sentence } from '../types'
   import Block from './Block.svelte'
@@ -11,7 +11,10 @@
   import ShuffleWord from './ShuffleWord.svelte'
   import TypeText from './TypeText.svelte'
   import { genderClass, headword, keyFormLines } from './format'
+  import { reducedMotion } from './motion'
   import { sweepIn } from './retext'
+  import { timeOfDay } from './hours.svelte'
+  import { nextRollover } from '../engine/day'
 
   let { session, onHint }: { session: Session; onHint: (hint: Hint) => boolean } = $props()
 
@@ -32,7 +35,7 @@
   let faceEl: HTMLElement | undefined = $state()
   let backEl: HTMLElement | undefined = $state()
 
-  const t = $derived(i18n.t)
+  const t = strings
   const word = $derived(face.word)
   const answered = $derived(face.phase === 'answered')
   const head = $derived(word ? headword(word) : { article: '', lemma: '' })
@@ -41,8 +44,8 @@
 
   // Of the word's sentences, the one with the most words the learner knows (D12).
   const sentence = $derived(face.sentence)
-  // The meaning follows the UI language: English glosses, or German definitions.
-  const glosses = $derived(word ? (i18n.lang === 'en' ? word.gloss_en : word.gloss_de) : [])
+  // The meaning in English (D66), and the sentence's translation once answered.
+  const glosses = $derived(word ? word.gloss_en : [])
   const showSentence = $derived(answered || session.hints.includes('sentence'))
   const showCognate = $derived(session.hints.includes('cognate') || (answered && !!word?.cognate_en))
 
@@ -55,12 +58,25 @@
     if (face.phase === 'ready') settled = false
   })
 
-  // Feierabend: today's reviews, and when the next learning card is due, if today.
+  // Feierabend (D21): today's reviews and their average, new words and the streak, the
+  // coverage since the day began, and what comes next: a learning card later today, or
+  // tomorrow's count. The lines scramble into place under the headline.
   const doneLines = $derived.by(() => {
     if (face.phase !== 'done') return []
+    const d = t.done
+    const lines: string[] = []
+    const average = session.averageToday
+    lines.push([d.reviews(session.today), average !== null ? d.average(average) : ''].filter(Boolean).join(' · '))
+    lines.push([session.newToday ? d.newWords(session.newToday) : '', session.streak ? d.streak(session.streak) : ''].filter(Boolean).join(' · '))
+    const [from, to] = [Math.round(session.coverageAtStart() * 100), Math.round(session.coverage * 100)]
+    lines.push(`${d.coverage} ${from}% → ${to}%${to > from ? ' ▲' : ''}`)
     const next = session.counts.nextDue
-    const time = next && new Intl.DateTimeFormat(i18n.lang, { hour: '2-digit', minute: '2-digit' }).format(next)
-    return [t.done.reviews(session.today), time ? t.done.nextAt(time) : t.done.tomorrow]
+    if (next) lines.push(d.nextAt(timeOfDay(next)))
+    else {
+      const tomorrow = session.countsAt(nextRollover(session.now).getTime() + 60_000).due
+      lines.push(tomorrow ? d.tomorrow(tomorrow) : d.nothing)
+    }
+    return lines.filter(Boolean)
   })
 
   $effect(() => {
@@ -73,7 +89,7 @@
   function sync() {
     if (flipping) return
     const next = current()
-    if (flips(face.phase, next.phase) && !matchMedia('(prefers-reduced-motion: reduce)').matches) flip()
+    if (flips(face.phase, next.phase) && !reducedMotion()) flip()
     else face = next
   }
 
@@ -129,8 +145,8 @@
         <button type="button" class="ready" onclick={() => session.start()}>{t.card.ready}</button>
       {:else if face.phase === 'done'}
         <div class="done">
-          <p class="done-title">{t.done.title}</p>
-          {#each doneLines as line (line)}<p>{line}</p>{/each}
+          <p class="done-title"><ShuffleText text={t.done.title} intro /></p>
+          {#each doneLines as line, i (i)}<p><ShuffleText text={line} intro staggerMs={25} /></p>{/each}
         </div>
       {:else}
         <div class="center">
@@ -160,7 +176,7 @@
         {#if word}
           <div class="below">
             {#if answered}
-              <ol class="glosses" lang={i18n.lang}>
+              <ol class="glosses" lang="en">
                 {#each glosses as gloss, i (i)}
                   <li>
                     {#if glosses.length > 1}<span class="muted">{i + 1}.</span>{/if}
@@ -178,7 +194,7 @@
             {#if showSentence && sentence}
               <div class="sentence">
                 <p lang="de"><TypeText text={sentence.de} hl={sentence.hl} animate={!answered} /></p>
-                {#if answered && i18n.lang === 'en' && sentence.en}
+                {#if answered && sentence.en}
                   <p class="muted" lang="en">{sentence.en}</p>
                 {/if}
               </div>
@@ -409,9 +425,7 @@
     margin: 0.4em -1ch 0;
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    .sound {
-      transition: none;
-    }
+  :global(:root[data-still]) .sound {
+    transition: none;
   }
 </style>

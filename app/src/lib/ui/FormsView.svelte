@@ -1,10 +1,10 @@
 <script lang="ts">
-  import { i18n } from '../i18n/index.svelte'
+  import { strings } from '../strings'
   import type { DeckWord } from '../types'
   import { keyFormLines } from './format'
 
   let { word }: { word: DeckWord } = $props()
-  const t = $derived(i18n.t.forms)
+  const t = strings.forms
 
   interface DeclensionCell {
     form: string
@@ -39,7 +39,7 @@
       .filter((table) => table.rows.some((row) => row.form)),
   )
   const caseTable = $derived(word.tables.cases as CaseTable | undefined)
-  const lines = $derived(keyFormLines(word, i18n.t))
+  const lines = $derived(keyFormLines(word, strings))
 
   function cell(c: DeclensionCell | null): string {
     return c ? [c.article, c.form].filter(Boolean).join(' ') : '–'

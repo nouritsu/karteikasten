@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import { frame, plan } from '../engine/shuffle'
+  import { reducedMotion } from './motion'
 
   let {
     article = '',
@@ -14,7 +15,7 @@
   let shown = $state('')
 
   onMount(() => {
-    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const reduced = reducedMotion()
     if (!animate || reduced) {
       shown = text
       onDone?.()

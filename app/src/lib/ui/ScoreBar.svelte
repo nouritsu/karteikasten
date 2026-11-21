@@ -1,6 +1,6 @@
 <script lang="ts">
   import { band } from '../engine/score'
-  import { i18n } from '../i18n/index.svelte'
+  import { strings } from '../strings'
   import type { Answer, Session } from '../session.svelte'
   import Block from './Block.svelte'
   import ShuffleText from './ShuffleText.svelte'
@@ -10,7 +10,7 @@
     onAnswer,
     onNext,
   }: { session: Session; onAnswer: (answer: Answer) => void; onNext: () => void } = $props()
-  const t = $derived(i18n.t.score)
+  const t = strings.score
   // No score before the clock starts, or on Feierabend.
   const waiting = $derived(['ready', 'reveal', 'done'].includes(session.phase))
   // The score sits in the title and shuffles on every change; the number and the

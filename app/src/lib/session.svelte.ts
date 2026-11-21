@@ -6,7 +6,7 @@
 // Nothing left: Feierabend
 
 import { ActiveClock } from './engine/clock'
-import { dayKey, streak } from './engine/day'
+import { dayKey, dayStart, streak } from './engine/day'
 import { ulid, type ReviewDetail, type StudyEvent } from './engine/events'
 import { counts, nextCard, type Pick, type QueueInput } from './engine/queue'
 import { isKnown, replay, scheduler, step, type WordState } from './engine/scheduler'
@@ -40,7 +40,7 @@ export class Session {
   readonly words: DeckWord[]
   readonly deckVersion: string
   readonly startedAt: number
-  settings: Settings
+  settings = $state.raw<Settings>(undefined!)
   states = $state.raw(new Map<string, WordState>())
   pick = $state.raw<Pick | null>(null)
   phase = $state<Phase>('ready')
@@ -52,6 +52,9 @@ export class Session {
   scores = $state<number[]>([]) // this session's scored reviews
   total = $state(0) // reviews all time
   daily = $state.raw(new Map<string, number>()) // reviews per learning day
+  #scoreByDay = new Map<string, number>() // the reviews' scores summed per learning day
+  #events: StudyEvent[] = [] // every event so far, for the coverage at the start of a day
+  #coverageAtStart: [string, number] | null = null
   error = $state<string | null>(null)
   #newByDay = new Map<string, number>() // words first studied per learning day
   #clock = new ActiveClock()
@@ -81,16 +84,26 @@ export class Session {
   /** States and counts from every event (at start, and after an import). */
   load(events: StudyEvent[], now = Date.now()): void {
     this.states = replay(events, this.#fsrs)
+    this.#events = [...events]
+    this.#coverageAtStart = null
     const daily = new Map<string, number>()
+    this.#scoreByDay = new Map()
     let total = 0
     for (const event of events) {
       if (event.type !== 'review') continue
       total++
       const day = dayKey(event.ts)
       daily.set(day, (daily.get(day) ?? 0) + 1)
+      this.#scoreByDay.set(day, (this.#scoreByDay.get(day) ?? 0) + (event.review?.score ?? 0))
     }
     this.daily = daily
     this.total = total
+    this.#countNew()
+    if (this.phase === 'ready' || this.phase === 'done') this.advance(now)
+  }
+
+  /** New words per learning day, from the states. */
+  #countNew(): void {
     this.#newByDay = new Map()
     for (const state of this.states.values()) {
       if (state.first) {
@@ -98,7 +111,6 @@ export class Session {
         this.#newByDay.set(day, (this.#newByDay.get(day) ?? 0) + 1)
       }
     }
-    if (this.phase === 'ready' || this.phase === 'done') this.advance(now)
   }
 
   // -- what the views show ------------------------------------------------------------------
@@ -126,6 +138,32 @@ export class Session {
     return streak(new Set(this.daily.keys()), dayKey(this.now))
   }
 
+  /** Today's reviews' mean score, for Feierabend. */
+  get averageToday(): number | null {
+    const day = dayKey(this.now)
+    const n = this.daily.get(day) ?? 0
+    return n ? Math.round((this.#scoreByDay.get(day) ?? 0) / n) : null
+  }
+
+  /** Words studied for the first time today. */
+  get newToday(): number {
+    return this.#newByDay.get(dayKey(this.now)) ?? 0
+  }
+
+  /** The coverage as today began (04:00), from the events before it; once a day. */
+  coverageAtStart(): number {
+    const day = dayKey(this.now)
+    if (this.#coverageAtStart?.[0] === day) return this.#coverageAtStart[1]
+    const start = dayStart(this.now).toISOString()
+    const before = replay(
+      this.#events.filter((e) => e.ts < start),
+      this.#fsrs,
+    )
+    const coverage = this.words.reduce((sum, w) => (isKnown(before.get(w.id)) ? sum + w.token_share : sum), 0)
+    this.#coverageAtStart = [day, coverage]
+    return coverage
+  }
+
   get average(): number | null {
     if (!this.scores.length) return null
     return Math.round(this.scores.reduce((sum, s) => sum + s, 0) / this.scores.length)
@@ -134,6 +172,17 @@ export class Session {
   /** Cards still due today, new words left today, and when the next learning card is due. */
   get counts(): { due: number; fresh: number; nextDue: Date | null } {
     return counts(this.#queue(this.now))
+  }
+
+  /** The same counts at another time, as they will be if nothing is studied till then
+   *  (the study reminder, D63). */
+  countsAt(at: number): { due: number; fresh: number; nextDue: Date | null } {
+    return counts(this.#queue(at))
+  }
+
+  /** Reviews answered on the learning day of `at`. */
+  reviewsOn(at: number): number {
+    return this.daily.get(dayKey(at)) ?? 0
   }
 
   // -- the queue ------------------------------------------------------------------------------
@@ -236,6 +285,15 @@ export class Session {
     this.advance(now, event.word_id)
   }
 
+  /** A Wörter action on a word (spec: Wörter): Kenne ich schon, Pausieren, Fortsetzen or
+   *  Zurücksetzen. A card waiting at Bereit or Feierabend is picked again, since the
+   *  action may have taken it out of the queue or put one in. */
+  act(type: 'known' | 'suspend' | 'unsuspend' | 'reset', wordId: string, now = Date.now()): void {
+    this.#commit(this.#event(type, wordId, now))
+    this.#countNew()
+    if (this.phase === 'ready' || this.phase === 'done') this.advance(now)
+  }
+
   /** The clock only counts while the page is visible. */
   visibility(hidden: boolean, now: number): void {
     if (this.phase !== 'running') return
@@ -259,6 +317,7 @@ export class Session {
   }
 
   #commit(event: StudyEvent): void {
+    this.#events.push(event)
     const before = this.states.get(event.word_id)
     const state = step(before, event, this.#fsrs)
     this.states = new Map(this.states).set(event.word_id, state)
@@ -270,6 +329,7 @@ export class Session {
       this.total++
       const day = dayKey(event.ts)
       this.daily = new Map(this.daily).set(day, (this.daily.get(day) ?? 0) + 1)
+      this.#scoreByDay.set(day, (this.#scoreByDay.get(day) ?? 0) + (event.review?.score ?? 0))
     }
     this.#save(this.#sink.add(event, state))
   }
