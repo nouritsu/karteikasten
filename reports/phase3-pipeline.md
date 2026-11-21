@@ -96,4 +96,4 @@ The app shows the new data in the Formen sheet: case tables, contractions, ordin
 
 - `data/raw/{arasaac,cldr,koeper,openmoji}` (about 20 MB) are leftovers from the pictures (D46). They are no longer in the lock and can be deleted.
 - The Phase 1 caches in `data/work/*.pickle` (about 220 MB) are unused now, and `pipeline/karteikasten_pipeline/spike.py` is gone.
-- The Phase 3 work is committed (c1d3446 to 8902eaa); the review changes above come after.
+- The Phase 3 work is committed (c388095 to 1422218); the review changes above come after.
