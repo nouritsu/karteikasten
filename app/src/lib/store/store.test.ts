@@ -13,7 +13,7 @@ let dbCount = 0
 /** A store with a few days of study written through the real session. */
 async function studied(name: string) {
   const store = await Store.open(name)
-  const settings = { ...DEFAULT_SETTINGS, newPerDay: 4, haptics: false }
+  const settings = { ...DEFAULT_SETTINGS, newPerDay: 4, haptics: 'off' as const }
   await store.saveSettings(settings)
   for (let day = 0; day < 3; day++) {
     const start = T0 + day * 86_400_000
@@ -43,14 +43,14 @@ describe('store', () => {
     const name = `roundtrip-${dbCount++}`
     const store = await studied(name)
     const before = { events: await store.events(), settings: await store.settings() }
-    const file = JSON.stringify(await makeBackup(store, 'device-1', { lang: 'en', theme: 'latte' }, new Date(T0)))
+    const file = JSON.stringify(await makeBackup(store, 'device-1', { theme: 'latte' }, new Date(T0)))
     store.close()
     await wipe(name)
 
     const empty = await Store.open(name)
     expect(await empty.events()).toEqual([])
     const result = await importBackup(empty, parseBackup(file), true)
-    expect(result).toMatchObject({ added: before.events.length, total: before.events.length, local: { lang: 'en', theme: 'latte' } })
+    expect(result).toMatchObject({ added: before.events.length, total: before.events.length, local: { theme: 'latte' } })
     const after = { events: await empty.events(), settings: await empty.settings() }
     expect(after).toEqual(before)
     const f = scheduler()

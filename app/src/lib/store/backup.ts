@@ -14,9 +14,9 @@ export const FORMAT = 'karteikasten-backup'
 export const VERSION = 1
 export const FOLDER = 'Karteikasten'
 
-/** UI choices kept in localStorage that travel with the settings. */
+/** A UI choice kept in localStorage that travels with the settings: Mocha, Latte or
+ *  System. (Backups from before D66 also carry the UI language, which is ignored.) */
 export interface Local {
-  lang?: string
   theme?: string
 }
 
@@ -41,8 +41,10 @@ export async function makeBackup(store: Store, deviceId: string, local: Local, n
   }
 }
 
-export function backupName(now = new Date()): string {
-  return `karteikasten-${dateKey(now)}.json`
+/** A file a day, or with Keep one file (D62) one file each export replaces. The
+ *  scheduled exports use the same names (Exports.java). */
+export function backupName(now = new Date(), oneFile = false): string {
+  return oneFile ? 'karteikasten.json' : `karteikasten-${dateKey(now)}.json`
 }
 
 export class BackupError extends Error {}
@@ -67,7 +69,7 @@ export function parseBackup(text: string): Backup {
 export interface Imported {
   added: number
   total: number
-  local: Local | null // language and theme to restore, when settings were restored
+  local: Local | null // the theme to restore, when settings were restored
 }
 
 /** Merges the backup's events; with `settings`, its settings replace the current ones. */
@@ -75,9 +77,10 @@ export async function importBackup(store: Store, backup: Backup, settings: boole
   const added = await store.mergeEvents(backup.events)
   let local: Local | null = null
   if (settings) {
-    const { lang, theme, ...rest } = backup.settings
+    const { theme, ...rest } = backup.settings as Settings & Local & { lang?: string }
+    delete rest.lang
     await store.saveSettings(withDefaults(rest))
-    local = { lang, theme }
+    local = { theme }
   }
   return { added, total: backup.events.length, local }
 }
