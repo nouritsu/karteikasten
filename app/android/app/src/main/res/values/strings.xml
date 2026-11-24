@@ -1,7 +1,0 @@
-<?xml version='1.0' encoding='utf-8'?>
-<resources>
-    <string name="app_name">Karteikasten</string>
-    <string name="title_activity_main">Karteikasten</string>
-    <string name="package_name">com.nouritsu.karteikasten</string>
-    <string name="custom_url_scheme">com.nouritsu.karteikasten</string>
-</resources>

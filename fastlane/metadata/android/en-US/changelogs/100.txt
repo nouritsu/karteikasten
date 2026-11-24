@@ -1,5 +1,0 @@
-The first public release.
-* The 2,000 most common German words, with recordings, forms and sentences.
-* Spaced repetition with FSRS, scored by how fast you answer and the hints you use.
-* Your level, A1.1 to B1.2, with quick checks for the words below it.
-* Stats, a searchable word list, a study reminder, and backups on a schedule.
